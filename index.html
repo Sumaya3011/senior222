@@ -1,0 +1,4489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TerraScope – Earth Change Monitoring</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-nav: rgba(15, 23, 42, 0.92);
+      --bg-panel: rgba(30, 41, 59, 0.88);
+      --bg-bottom: rgba(15, 23, 42, 0.94);
+      --border-subtle: rgba(55, 65, 81, 0.9);
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.35);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --text-soft: #94a3b8;
+      --glass-blur: blur(14px);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      min-height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+      background: #020617;
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+    }
+
+    .app-root {
+      width: 100%;
+      min-height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.65; transform: scale(0.92); }
+    }
+
+    .chat-row-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .assistant-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .assistant-label::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+      animation: pulse-dot 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    .chat-toggle {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(71, 85, 105, 0.75);
+      color: var(--text-soft);
+      font-size: 11px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 4px 9px;
+      border-radius: 999px;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .chat-toggle:hover {
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--text-main);
+      border-color: rgba(96, 165, 250, 0.45);
+    }
+
+    /* Horizontal transcript: pills in a row, scroll sideways */
+    .chat-messages {
+      flex: 1 1 160px;
+      min-width: 0;
+      min-height: 38px;
+      max-height: 40px;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      border-radius: 10px;
+      border: 1px solid rgba(51, 65, 85, 0.65);
+      background: rgba(2, 6, 23, 0.55);
+      font-size: 11px;
+      scrollbar-width: thin;
+      transition: max-height 0.25s ease, min-height 0.25s ease, padding 0.25s ease, opacity 0.2s ease, border-color 0.2s ease;
+    }
+
+    .chat-messages.collapsed {
+      flex: 0 0 0;
+      min-width: 0;
+      min-height: 0;
+      max-height: 0;
+      padding: 0;
+      margin: 0;
+      opacity: 0;
+      overflow: hidden;
+      border-color: transparent;
+      border-width: 0;
+    }
+
+    .message {
+      flex-shrink: 0;
+      margin-bottom: 0;
+      max-width: min(260px, 55vw);
+    }
+
+    .bubble {
+      padding: 5px 9px;
+      border-radius: 999px;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: min(260px, 55vw);
+      font-size: 11px;
+    }
+
+    .message.bot .bubble {
+      background: rgba(30, 41, 59, 0.95);
+      color: #e5e7eb;
+      border: 1px solid rgba(51, 65, 85, 0.8);
+    }
+
+    .message.user .bubble {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #f8fafc;
+    }
+
+    .site-header-chat .chat-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex: 1 1 240px;
+      min-width: 140px;
+      max-width: 420px;
+    }
+
+    .chat-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .chat-input {
+      flex: 1;
+      min-width: 0;
+      border-radius: 999px;
+      border: 1px solid rgba(71, 85, 105, 0.85);
+      background: rgba(2, 6, 23, 0.75);
+      color: var(--text-main);
+      font-size: 12px;
+      padding: 7px 14px;
+      height: 38px;
+    }
+
+    .chat-input::placeholder {
+      color: #64748b;
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+
+    .chat-send,
+    .video-btn {
+      border-radius: 999px;
+      border: none;
+      padding: 0 16px;
+      height: 38px;
+      font-size: 12px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #ffffff;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.3);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .chat-send:hover,
+    .video-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 22px rgba(59, 130, 246, 0.5);
+    }
+
+    .chat-send:active,
+    .video-btn:active {
+      transform: translateY(0);
+    }
+
+    /* —— Site header (standard app layout) —— */
+    .site-header {
+      flex-shrink: 0;
+      z-index: 1100;
+      background: rgba(15, 23, 42, 0.92);
+      border-bottom: 1px solid var(--border-subtle);
+      backdrop-filter: var(--glass-blur);
+    }
+
+    .site-header-inner {
+      max-width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 12px clamp(12px, 3vw, 24px) 14px;
+    }
+
+    .site-header-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.45);
+    }
+
+    .brand-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .brand-block-head {
+      display: flex;
+      align-items: center;
+      gap: clamp(8px, 2vw, 12px);
+      min-width: 0;
+    }
+
+    .top-brand-logo-wrap {
+      flex-shrink: 0;
+      width: clamp(36px, 8vw, 44px);
+      height: clamp(36px, 8vw, 44px);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .top-brand-logo {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: 50% 0;
+    }
+
+    .top-brand-title {
+      font-size: clamp(1.2rem, 2.4vw, 1.55rem);
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      line-height: 1.15;
+      background: linear-gradient(90deg, #e2e8f0, #94a3b8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .top-brand-subtitle {
+      font-size: 11px;
+      color: var(--text-soft);
+      max-width: 36rem;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    .brand-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin: 0;
+      text-align: right;
+      max-width: 220px;
+      opacity: 0.9;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .help-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(96, 165, 250, 0.55);
+      background: rgba(37, 99, 235, 0.22);
+      color: #dbeafe;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 7px 12px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .help-btn:hover {
+      background: rgba(59, 130, 246, 0.34);
+      border-color: rgba(147, 197, 253, 0.75);
+      color: #f8fafc;
+    }
+
+    @media (max-width: 640px) {
+      .brand-meta {
+        text-align: left;
+        max-width: none;
+        width: 100%;
+      }
+    }
+
+    /* Row 2: assistant — one horizontal strip */
+    .site-header-chat {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 10px 14px;
+      padding: 10px 0 2px;
+    }
+
+    @media (max-width: 720px) {
+      .site-header-chat {
+        flex-wrap: wrap;
+      }
+      .site-header-chat .chat-row-head {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .site-header-chat .chat-messages {
+        flex: 1 1 100%;
+        max-width: none;
+        order: 2;
+      }
+      .site-header-chat .chat-form {
+        flex: 1 1 100%;
+        max-width: none;
+        order: 3;
+      }
+    }
+
+    /* Left-side controls window */
+    .site-header-controls {
+      width: 340px;
+      min-width: 300px;
+      height: auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 10px;
+      border-right: 1px solid rgba(51, 65, 85, 0.78);
+      background: rgba(2, 6, 23, 0.82);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      scrollbar-width: thin;
+      flex: 0 0 340px;
+    }
+
+    .monitor-toolbar-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin: 0;
+      padding: 2px 4px 0;
+    }
+
+    .monitor-toolbar {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .mode-segments {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 8px;
+      border-radius: 14px;
+      background: rgba(2, 6, 23, 0.82);
+      border: 1px solid rgba(71, 85, 105, 0.92);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .modes-bar {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(51, 65, 85, 0.55);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .monitor-radio {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 0;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .monitor-radio input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .monitor-radio span {
+      display: block;
+      padding: 7px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .monitor-radio input:focus-visible + span {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .monitor-radio input:checked + span {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), rgba(37, 99, 235, 0.25));
+      color: #f1f5f9;
+      box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.45);
+    }
+
+    .toolbar-fields {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      width: 100%;
+      min-width: 0;
+      padding: 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      background: rgba(2, 6, 23, 0.56);
+      box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.05);
+    }
+
+    .toolbar-field {
+      width: 100%;
+      min-width: 100px;
+    }
+
+    .toolbar-field.city-field {
+      min-width: 140px;
+    }
+
+    .change-presets-panel {
+      display: none;
+      width: 100%;
+      min-width: 0;
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.62);
+      padding: 8px;
+    }
+
+    .summary-analysis-trigger-wrap {
+      margin-top: 10px;
+    }
+
+    .summary-show-btn {
+      width: 100%;
+      margin-top: 4px;
+      padding: 0.55rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      background: rgba(14, 116, 144, 0.35);
+      color: #e0f2fe;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .summary-show-btn:hover {
+      background: rgba(14, 116, 144, 0.55);
+      border-color: rgba(56, 189, 248, 0.65);
+    }
+
+    .prediction-controls-panel {
+      display: none;
+      width: 100%;
+      min-width: 0;
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.62);
+      padding: 8px;
+    }
+
+    .prediction-controls-panel .field-caption {
+      margin-bottom: 8px;
+    }
+
+    .prediction-view {
+      position: absolute;
+      inset: 0;
+      z-index: 700;
+      background: rgba(2, 6, 23, 0.98);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 8px;
+    }
+
+    .prediction-view[hidden] {
+      display: none !important;
+    }
+
+    .prediction-image {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 10px;
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      background: #000;
+    }
+
+    .prediction-image[hidden] {
+      display: none !important;
+    }
+
+    .prediction-grid {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .prediction-grid[hidden] {
+      display: none !important;
+    }
+
+    .prediction-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(71, 85, 105, 0.8);
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    .prediction-card-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .prediction-msg {
+      width: 100%;
+      text-align: center;
+      font-size: 12px;
+      color: #cbd5e1;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.86);
+      border: 1px solid rgba(71, 85, 105, 0.8);
+    }
+
+    .prediction-msg.error {
+      color: #fca5a5;
+      border-color: rgba(248, 113, 113, 0.6);
+      background: rgba(127, 29, 29, 0.25);
+    }
+
+    #video-tools.video-inline {
+      width: 100%;
+      min-width: 0;
+    }
+
+    @media (max-width: 1100px) {
+      .site-header-controls {
+        width: 300px;
+        min-width: 280px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .site-header-controls {
+        width: 260px;
+        min-width: 240px;
+      }
+    }
+
+    .city-autocomplete-wrap {
+      position: relative;
+    }
+
+    .city-suggestions {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      z-index: 3000;
+      max-height: min(280px, 42vh);
+      overflow-y: auto;
+      border-radius: 10px;
+      border: 1px solid rgba(71, 85, 105, 0.95);
+      background: rgba(15, 23, 42, 0.98);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(10px);
+    }
+
+    .city-suggestions[hidden] {
+      display: none !important;
+    }
+
+    .city-suggestion-item {
+      padding: 8px 10px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: #e2e8f0;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.55);
+    }
+
+    .city-suggestion-item:last-child {
+      border-bottom: none;
+    }
+
+    .city-suggestion-item:hover,
+    .city-suggestion-item.active {
+      background: rgba(59, 130, 246, 0.22);
+      color: #f8fafc;
+    }
+
+    .change-presets {
+      margin-bottom: 8px;
+    }
+
+    .change-presets .field-caption {
+      margin-top: 0;
+      margin-bottom: 6px;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .preset-card {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: 1px solid rgba(51, 65, 85, 0.95);
+      border-radius: 10px;
+      background: rgba(2, 6, 23, 0.9);
+      color: #e2e8f0;
+      padding: 7px 9px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .preset-card:hover {
+      border-color: #60a5fa;
+      background: rgba(37, 99, 235, 0.16);
+    }
+
+    .preset-card.selected {
+      border-color: #3b82f6;
+      background: rgba(37, 99, 235, 0.22);
+    }
+
+    .preset-card strong {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 2px;
+      color: #f8fafc;
+    }
+
+    .preset-card span {
+      display: block;
+      font-size: 10px;
+      color: #94a3b8;
+      line-height: 1.35;
+    }
+
+    label {
+      font-size: 10px;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .year-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 0;
+    }
+
+    select,
+    input[type="text"],
+    input[type="date"],
+    input[type="number"] {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(71, 85, 105, 0.95);
+      background: rgba(2, 6, 23, 0.9);
+      color: var(--text-main);
+      font-size: 12px;
+      padding: 8px 10px;
+      outline: none;
+      color-scheme: dark;
+    }
+
+    select:focus,
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+
+    .field-caption {
+      font-size: 9px;
+      color: var(--text-soft);
+      margin-top: 3px;
+      line-height: 1.25;
+    }
+
+    .monitor-divider {
+      display: none;
+    }
+
+    .video-inline {
+      flex: 1 1 100%;
+      min-width: 100%;
+    }
+
+    @media (min-width: 720px) {
+      .video-inline {
+        flex: 0 1 auto;
+        min-width: 200px;
+      }
+    }
+
+    /* —— Full-screen map stage —— */
+    .map-stage {
+      height: auto;
+      min-height: 0;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .workspace-row {
+      display: flex;
+      align-items: stretch;
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 100%;
+    }
+
+    .assistant-dock {
+      display: none;
+    }
+
+    .app-root.chat-dock-open .assistant-dock {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: clamp(320px, 25vw, 460px);
+      min-width: 320px;
+      display: flex;
+      flex-direction: column;
+      background: rgba(15, 23, 42, 0.95);
+      border-left: 1px solid rgba(51, 65, 85, 0.92);
+      backdrop-filter: blur(10px);
+      padding: 10px;
+      gap: 8px;
+      overflow: hidden;
+      z-index: 2400;
+    }
+
+    .app-root.chat-dock-open .site-header,
+    .app-root.chat-dock-open .workspace-row,
+    .app-root.chat-dock-open #change-analysis-footer {
+      margin-right: clamp(320px, 25vw, 460px);
+    }
+
+    .assistant-dock-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 2px 2px 0;
+    }
+
+    .assistant-head-left {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .assistant-dock-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #cbd5e1;
+    }
+
+    .chat-loading {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      color: #93c5fd;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .chat-loading.show {
+      display: inline-flex;
+    }
+
+    .chat-loading-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #60a5fa;
+      box-shadow: 0 0 8px rgba(96, 165, 250, 0.85);
+      animation: pulse-dot 1.25s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    .assistant-dock-close {
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      background: rgba(30, 41, 59, 0.9);
+      color: #e5e7eb;
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    .assistant-dock .chat-messages {
+      max-height: none;
+      min-height: 0;
+      height: 100%;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 8px;
+    }
+
+    .assistant-dock .message {
+      max-width: 100%;
+    }
+
+    .assistant-dock .bubble {
+      border-radius: 12px;
+      white-space: normal;
+      text-overflow: clip;
+      max-width: 100%;
+      font-size: 12px;
+      padding: 7px 10px;
+    }
+
+    .assistant-dock .chat-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 840px) {
+      .workspace-row {
+        display: block;
+        height: auto;
+      }
+      .site-header-controls {
+        width: 100%;
+        min-width: 0;
+        height: auto;
+        min-height: 0;
+        border-right: none;
+        border-bottom: 1px solid rgba(51, 65, 85, 0.78);
+      }
+      .app-root.chat-dock-open .assistant-dock {
+        width: 100%;
+        min-width: 100%;
+        border-left: none;
+        z-index: 2600;
+      }
+      .app-root.chat-dock-open .site-header,
+      .app-root.chat-dock-open .workspace-row,
+      .app-root.chat-dock-open #change-analysis-footer {
+        margin-right: 0;
+      }
+    }
+
+    .map-container {
+      position: absolute;
+      inset: 0;
+      border-radius: 0;
+      overflow: hidden;
+      border: none;
+      background: #020617;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    @media (min-width: 768px) {
+      .map-container {
+        padding: 8px 10px 10px;
+      }
+    }
+
+    .map-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .map-grid > #map-legend {
+      flex: 0 0 auto;
+      width: 100%;
+    }
+
+    .map-grid.has-change-row > #map-legend {
+      border-radius: 10px;
+      border: 1px solid rgba(51, 65, 85, 0.65);
+    }
+
+    .map-grid-row {
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .map-grid.has-change-row .map-grid-row {
+      flex: 1 1 0;
+      gap: 10px;
+    }
+
+    .map-grid.has-change-row #map-panel-c:not([hidden]) {
+      flex: 1 1 0;
+      min-height: 170px;
+    }
+
+    .map-grid.has-change-row .map-panel {
+      border-color: rgba(71, 85, 105, 0.95);
+      background: linear-gradient(180deg, rgba(2, 6, 23, 0.8), rgba(2, 6, 23, 0.55));
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.5);
+    }
+
+    .map-grid.has-change-row .map-panel-header {
+      padding: 8px 12px;
+      border-bottom-color: rgba(51, 65, 85, 0.9);
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.72));
+    }
+
+    .map-grid.has-change-row .map-panel-title {
+      font-weight: 700;
+      color: #e2e8f0;
+      letter-spacing: 0.01em;
+    }
+
+    .map-grid.has-change-row .map-download-btn {
+      background: rgba(37, 99, 235, 0.2);
+      border-color: rgba(96, 165, 250, 0.5);
+      color: #bfdbfe;
+    }
+
+    .map-grid.single-map-mode .map-grid-row {
+      display: block;
+    }
+
+    .map-grid.single-map-mode #map-panel-a {
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-grid.single-map-mode #map-panel-b {
+      display: none !important;
+    }
+
+    .map-grid.single-map-mode #map-panel-c {
+      display: none !important;
+    }
+
+    @media (max-width: 700px) {
+      .map-grid-row {
+        flex-direction: column;
+      }
+    }
+
+    .map-panel {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(51, 65, 85, 0.85);
+      background: rgba(2, 6, 23, 0.5);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    .map-panel-header {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 6px 10px;
+      border-bottom: 1px solid rgba(30, 41, 59, 0.9);
+      background: rgba(15, 23, 42, 0.6);
+      flex-shrink: 0;
+    }
+
+    .map-panel-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .map-panel-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .map-download-btn {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      background: rgba(37, 99, 235, 0.25);
+      color: #93c5fd;
+      cursor: pointer;
+    }
+
+    .map-download-btn:hover {
+      background: rgba(59, 130, 246, 0.4);
+      color: #e0e7ff;
+    }
+
+    .region-chip-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .region-chip-wrap[hidden] {
+      display: none !important;
+    }
+
+    .region-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(30, 41, 59, 0.95);
+      border: 1px solid rgba(71, 85, 105, 0.9);
+      font-size: 11px;
+      color: var(--text-main);
+    }
+
+    #region-chip-clear {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(239, 68, 68, 0.22);
+      color: #fca5a5;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    #region-chip-clear:hover {
+      background: rgba(239, 68, 68, 0.42);
+      color: #fff;
+    }
+
+    .map-inner {
+      flex: 1;
+      min-height: 120px;
+      position: relative;
+    }
+
+    #mapA,
+    #mapB,
+    #mapC {
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-legend {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      padding: 10px 16px;
+      background: rgba(15, 23, 42, 0.92);
+      border-top: 1px solid rgba(51, 65, 85, 0.7);
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+
+    .map-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .map-legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .map-legend-label {
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+
+    .map-inline-legend {
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      color: #e5e7eb;
+      backdrop-filter: blur(8px);
+      font-size: 11px;
+    }
+
+    .map-inline-legend .map-legend-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+      font-size: 10px;
+      color: #f1f5f9;
+    }
+
+    .map-inline-legend .map-legend-item {
+      margin-bottom: 0;
+    }
+
+    .leaflet-control.custom-map-legend {
+      margin: 8px !important;
+      max-width: min(200px, 38vw);
+    }
+
+    .video-preview {
+      position: absolute;
+      inset: 0;
+      z-index: 2000;
+      background: rgba(2, 6, 23, 0.96);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .video-preview[hidden] {
+      display: none !important;
+    }
+
+    .video-preview-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .video-preview-close {
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      background: rgba(30, 41, 59, 0.9);
+      color: #e5e7eb;
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    .video-preview video {
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      background: #000;
+      object-fit: contain;
+    }
+
+    /* —— ChangeAnalysis.py embedded UI (footer summary + report modal) —— */
+    #change-analysis-footer {
+      background: #0c1428;
+      border-top: 1px solid #1e3a5f;
+      border-radius: 0;
+      border: 1px solid rgba(30, 58, 95, 0.95);
+      padding: 0.95rem 1.1rem 1rem;
+      font-size: 0.875rem;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+      color: #e8eef7;
+    }
+
+    #change-analysis-footer[hidden] {
+      display: none !important;
+    }
+
+    .summary-footer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      flex: 0 0 100%;
+      margin-bottom: 0.35rem;
+    }
+
+    .summary-footer-head strong {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #8b9cb5;
+      display: block;
+      margin-bottom: 0;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .summary-minimize-btn {
+      flex-shrink: 0;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(30, 41, 59, 0.85);
+      color: #e2e8f0;
+      border-radius: 8px;
+      width: 30px;
+      height: 28px;
+      padding: 0;
+      font-size: 16px;
+      line-height: 1;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .summary-minimize-btn:hover {
+      background: rgba(51, 65, 85, 0.95);
+      border-color: rgba(148, 163, 184, 0.65);
+    }
+
+    #change-analysis-footer .summary-body {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 8px 14px;
+      width: 100%;
+      flex: 0 0 100%;
+    }
+
+    #change-analysis-footer.is-minimized .summary-body {
+      display: none;
+    }
+
+    #change-analysis-footer.is-minimized {
+      padding: 0.55rem 1.1rem 0.6rem;
+    }
+
+    #change-analysis-footer #summary {
+      color: #e8eef7;
+      line-height: 1.45;
+      flex: 1 1 460px;
+      max-height: none;
+      overflow: visible;
+      padding-right: 0;
+    }
+
+    #change-analysis-footer #summary p {
+      margin: 0 0 0.5rem;
+    }
+
+    #change-analysis-footer #summary ul {
+      margin: 0.25rem 0 0;
+      padding-left: 1.1rem;
+    }
+
+    #change-analysis-footer #summary .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    #change-analysis-footer #summary .summary-card {
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      border-radius: 10px;
+      padding: 8px 9px;
+    }
+
+    #change-analysis-footer #summary .summary-card .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    #change-analysis-footer #summary .summary-card .value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f8fafc;
+      line-height: 1.2;
+    }
+
+    #change-analysis-footer #summary .risk-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 2px;
+      letter-spacing: 0.03em;
+    }
+
+    #change-analysis-footer #summary .risk-pill.low {
+      color: #86efac;
+      background: rgba(22, 163, 74, 0.22);
+    }
+
+    #change-analysis-footer #summary .risk-pill.med {
+      color: #fde047;
+      background: rgba(202, 138, 4, 0.24);
+    }
+
+    #change-analysis-footer #summary .risk-pill.high {
+      color: #fca5a5;
+      background: rgba(220, 38, 38, 0.24);
+    }
+
+    #change-analysis-footer #summary .summary-metrics {
+      display: grid;
+      gap: 7px;
+      margin: 8px 0;
+    }
+
+    #change-analysis-footer #summary .metric-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 44px;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #cbd5e1;
+    }
+
+    #change-analysis-footer #summary .metric-label {
+      color: #a5b4fc;
+      white-space: nowrap;
+    }
+
+    #change-analysis-footer #summary .metric-bar {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(30, 41, 59, 0.92);
+      overflow: hidden;
+      border: 1px solid rgba(71, 85, 105, 0.8);
+    }
+
+    #change-analysis-footer #summary .metric-bar > span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      min-width: 2px;
+    }
+
+    #change-analysis-footer #summary .metric-bar.water > span {
+      background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+    }
+
+    #change-analysis-footer #summary .metric-bar.veg > span {
+      background: linear-gradient(90deg, #4ade80, #16a34a);
+    }
+
+    #change-analysis-footer #summary .metric-bar.built > span {
+      background: linear-gradient(90deg, #f97316, #ea580c);
+    }
+
+    #change-analysis-footer #summary .metric-value {
+      text-align: right;
+      color: #e2e8f0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #change-analysis-footer #summary .transition-list {
+      margin-top: 6px;
+      display: grid;
+      gap: 6px;
+    }
+
+    #change-analysis-footer #summary .transition-item {
+      display: grid;
+      grid-template-columns: 1fr 52px;
+      gap: 8px;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.68);
+      border: 1px solid rgba(51, 65, 85, 0.72);
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 11px;
+      color: #e2e8f0;
+    }
+
+    #change-analysis-footer #summary .transition-pct {
+      text-align: right;
+      color: #93c5fd;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #change-analysis-footer button.secondary {
+      margin-top: 0.1rem;
+      padding: 0.55rem 1.1rem;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      white-space: nowrap;
+      align-self: flex-start;
+    }
+
+    #change-analysis-footer button.secondary:hover {
+      background: #3b82f6;
+    }
+
+    #change-analysis-footer:not([hidden]) {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 8px 14px;
+    }
+
+
+    #reportBox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 20, 0.72);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      backdrop-filter: blur(4px);
+    }
+
+    #reportBox.show {
+      display: flex;
+    }
+
+    #reportInner {
+      background: #0c1428;
+      border: 1px solid #1e3a5f;
+      max-width: 740px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: auto;
+      border-radius: 20px;
+      padding: 1.5rem 1.75rem;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+      color: #e8eef7;
+    }
+
+    .report-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .report-top h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #e8eef7;
+    }
+
+    .btn-close {
+      flex-shrink: 0;
+      padding: 0.4rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid #1e3a5f;
+      background: #111d3a;
+      color: #e8eef7;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+
+    .btn-close:hover {
+      border-color: #8b9cb5;
+    }
+
+    #reportInner .card {
+      background: #111d3a;
+      border: 1px solid #1e3a5f;
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.85rem;
+    }
+
+    #reportInner .card h3 {
+      margin: 0 0 0.65rem;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #8b9cb5;
+      font-weight: 700;
+    }
+
+    #reportInner .card p {
+      margin: 0 0 0.5rem;
+      line-height: 1.45;
+      color: #e8eef7;
+      font-size: 0.9rem;
+    }
+
+    #reportInner .card p:last-child {
+      margin-bottom: 0;
+    }
+
+    #reportInner .card ul {
+      margin: 0;
+      padding-left: 1.1rem;
+      color: #e8eef7;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    #reportInner .card li {
+      margin-bottom: 0.35rem;
+    }
+
+    .risk-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .badge.low {
+      background: rgba(34, 197, 94, 0.18);
+      color: #86efac;
+    }
+
+    .badge.med {
+      background: rgba(234, 179, 8, 0.2);
+      color: #fde047;
+    }
+
+    .badge.high {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+    }
+
+    .meta-line {
+      font-size: 0.85rem;
+      color: #8b9cb5;
+    }
+
+    .meta-line strong {
+      color: #e8eef7;
+    }
+
+    .gpt-note {
+      font-size: 0.75rem;
+      color: #8b9cb5;
+      margin-top: 0.5rem;
+    }
+
+    .err-box {
+      color: #fca5a5;
+      font-size: 0.875rem;
+      white-space: pre-wrap;
+    }
+
+    .rpt-header {
+      background: #111d3a;
+      border-radius: 14px;
+      padding: 1.1rem 1.3rem;
+      margin-bottom: 0.85rem;
+      border: 1px solid #1e3a5f;
+    }
+    .rpt-meta {
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+    .rpt-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 3px;
+      color: #e8eef7;
+    }
+    .rpt-sub {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+    .rpt-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 0.85rem;
+    }
+    .rpt-metric-card {
+      background: #111d3a;
+      border: 1px solid #1e3a5f;
+      border-radius: 12px;
+      padding: 0.75rem 0.85rem;
+    }
+    .rpt-metric-label {
+      font-size: 0.62rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .rpt-metric-value {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 2px;
+    }
+    .rpt-metric-detail {
+      font-size: 0.65rem;
+      color: #64748b;
+      line-height: 1.3;
+    }
+    .rpt-section {
+      background: #0c1428;
+      border: 1px solid #1e3a5f;
+      border-radius: 14px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 0.75rem;
+    }
+    .rpt-section-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+    .rpt-section-body {
+      font-size: 0.88rem;
+      line-height: 1.65;
+      color: #cbd5e1;
+    }
+    .rpt-transition-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(30, 58, 95, 0.5);
+      font-size: 0.82rem;
+    }
+    .rpt-transition-row:last-child { border-bottom: none; }
+    .rpt-t-arrow { color: #38bdf8; font-weight: 500; }
+    .rpt-t-pct { font-weight: 600; color: #94a3b8; }
+    .rpt-rec-item {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(30, 58, 95, 0.5);
+      font-size: 0.84rem;
+      line-height: 1.6;
+      color: #cbd5e1;
+    }
+    .rpt-rec-item:last-child { border-bottom: none; }
+    .rpt-rec-num {
+      font-weight: 700;
+      color: #38bdf8;
+      min-width: 20px;
+      flex-shrink: 0;
+    }
+    .rpt-source-bar {
+      font-size: 0.65rem;
+      color: #475569;
+      padding: 8px 0 0;
+      border-top: 1px solid rgba(30, 58, 95, 0.4);
+      margin-top: 0.5rem;
+    }
+    .rpt-download-bar {
+      display: flex;
+      justify-content: center;
+      padding-top: 0.85rem;
+      margin-top: 0.5rem;
+    }
+    .rpt-download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.6rem 1.6rem;
+      border-radius: 12px;
+      border: 1px solid #1e3a5f;
+      background: #111d3a;
+      color: #e8eef7;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .rpt-download-btn:hover {
+      background: #182849;
+      border-color: #38bdf8;
+    }
+
+    #globalLoading {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2600;
+      pointer-events: none;
+    }
+
+    #globalLoading.show {
+      display: flex;
+    }
+
+    .loading-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(51, 65, 85, 0.95);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+      color: #e2e8f0;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .loading-spinner {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid rgba(148, 163, 184, 0.45);
+      border-top-color: #60a5fa;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .leaflet-control-layers {
+      border-radius: 12px !important;
+      overflow: hidden;
+      border: 1px solid rgba(51, 65, 85, 0.9) !important;
+      background: rgba(15, 23, 42, 0.95) !important;
+      color: #e5e7eb !important;
+    }
+
+    .leaflet-control-layers-toggle {
+      width: 38px !important;
+      height: 38px !important;
+    }
+
+    @media (max-width: 699px) {
+      #change-analysis-footer:not([hidden]) {
+        display: block;
+      }
+
+      #change-analysis-footer:not([hidden]) .summary-body {
+        display: block;
+      }
+
+      #change-analysis-footer button.secondary {
+        width: 100%;
+        margin-top: 0.6rem;
+      }
+    }
+
+    /* —— Welcome splash (first visit) —— */
+    html.welcome-already-seen .welcome-overlay {
+      display: none !important;
+      pointer-events: none;
+    }
+
+    .welcome-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: max(16px, env(safe-area-inset-top)) 24px 24px;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 100% 70% at 50% 12%, rgba(37, 99, 235, 0.22), transparent 52%),
+        radial-gradient(ellipse 80% 55% at 80% 90%, rgba(5, 150, 105, 0.12), transparent 45%),
+        linear-gradient(180deg, #0c1929 0%, #0a192f 38%, #050a14 100%);
+      overflow: hidden;
+      transition: opacity 0.55s ease, visibility 0.55s ease;
+    }
+
+    .welcome-overlay::before {
+      content: "";
+      position: absolute;
+      inset: -25%;
+      background:
+        radial-gradient(circle at 25% 35%, rgba(59, 130, 246, 0.14) 0%, transparent 42%),
+        radial-gradient(circle at 75% 65%, rgba(16, 185, 129, 0.12) 0%, transparent 42%);
+      animation: welcome-aurora 16s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    @keyframes welcome-aurora {
+      0% {
+        transform: translate(-3%, 2%) scale(1);
+        opacity: 0.85;
+      }
+      100% {
+        transform: translate(3%, -2%) scale(1.06);
+        opacity: 1;
+      }
+    }
+
+    .welcome-overlay--leaving {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .welcome-card {
+      position: relative;
+      text-align: center;
+      max-width: min(380px, 92vw);
+      z-index: 1;
+      padding: 1.25rem 0.75rem;
+      pointer-events: none;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+
+    .welcome-card::before,
+    .welcome-card::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 42%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 1px solid rgba(96, 165, 250, 0.14);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .welcome-card::before {
+      width: min(320px, 88vw);
+      height: min(320px, 88vw);
+      max-width: 92vw;
+      max-height: min(320px, 55vh);
+    }
+
+    .welcome-card::after {
+      width: min(260px, 76vw);
+      height: min(260px, 76vw);
+      max-height: min(260px, 48vh);
+      border-color: rgba(56, 189, 248, 0.1);
+    }
+
+    .welcome-logo-wrap {
+      position: relative;
+      z-index: 1;
+      width: min(300px, 86vw);
+      margin: 0 auto;
+    }
+
+    .welcome-brand-img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+      margin: 0 auto;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.35));
+      animation: welcome-float 5.5s ease-in-out infinite;
+    }
+
+    .welcome-sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @keyframes welcome-float {
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-8px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .welcome-overlay::before,
+      .welcome-brand-img {
+        animation: none !important;
+      }
+    }
+  </style>
+  <script>
+    try {
+      if (localStorage.getItem("terrascope_welcome_seen_v9") === "1") {
+        document.documentElement.classList.add("welcome-already-seen");
+      }
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <div
+    id="welcome-overlay"
+    class="welcome-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="welcome-title"
+    aria-describedby="welcome-desc"
+  >
+    <div class="welcome-card">
+      <h1 id="welcome-title" class="welcome-sr-only">TerraScope</h1>
+      <p id="welcome-desc" class="welcome-sr-only">
+        Earth change monitoring. Earth Engine. Satellite insight.
+      </p>
+      <div class="welcome-logo-wrap">
+        <img
+          class="welcome-brand-img"
+          src="/welcome-brand-logo.png"
+          width="512"
+          height="512"
+          alt="TerraScope — Earth change monitoring"
+          decoding="async"
+          fetchpriority="high"
+        />
+      </div>
+    </div>
+  </div>
+  <div class="app-root">
+    <header class="site-header">
+      <div class="site-header-inner">
+        <div class="site-header-top">
+          <div class="brand-block">
+            <div class="brand-block-head">
+              <span class="top-brand-logo-wrap" aria-hidden="true">
+                <img
+                  class="top-brand-logo"
+                  src="/welcome-brand-logo.png"
+                  width="44"
+                  height="44"
+                  alt=""
+                  decoding="async"
+                />
+              </span>
+              <div class="top-brand-title">TerraScope</div>
+            </div>
+            <p class="top-brand-subtitle">Dynamic World by day — Home shows one map (world or your region). Pick dates and modes below.</p>
+          </div>
+          <div class="top-actions">
+            <p class="brand-meta">Dynamic World · Earth Engine · OpenAI</p>
+            <button type="button" class="help-btn" id="help-open-btn" title="Open AI help assistant">
+              Help
+            </button>
+          </div>
+        </div>
+        <div class="modes-bar">
+          <span class="monitor-toolbar-label">Modes</span>
+          <div class="mode-segments" role="radiogroup" aria-label="Analysis mode">
+            <label class="monitor-radio">
+              <input type="radio" name="mode" value="home" checked />
+              <span>Home</span>
+            </label>
+            <label class="monitor-radio">
+              <input type="radio" name="mode" value="change_detection" />
+              <span>Change</span>
+            </label>
+            <label class="monitor-radio">
+              <input type="radio" name="mode" value="timeseries" />
+              <span>Time series</span>
+            </label>
+            <label class="monitor-radio">
+              <input type="radio" name="mode" value="prediction" />
+              <span>Prediction</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <div class="workspace-row">
+      <div class="site-header-controls">
+        <span class="monitor-toolbar-label">Map controls</span>
+        <div class="monitor-toolbar">
+          <div class="toolbar-fields">
+            <div class="toolbar-field change-presets-panel" id="change-presets-panel">
+              <div class="change-presets">
+                <div class="field-caption">Quick change-detection states (5): tap one to load instantly.</div>
+                <div class="preset-grid" id="changePresetGrid"></div>
+              </div>
+            </div>
+            <div class="toolbar-field" id="date-controls-row">
+              <label>Dates</label>
+              <div class="year-row">
+                <div id="dateA-container" style="flex:1;">
+                  <small class="field-caption">Date A </small>
+                  <input type="date" id="dateA" min="2018-01-01" />
+                </div>
+                <div id="dateB-container" style="flex:1;">
+                  <small class="field-caption">Date B </small>
+                  <input type="date" id="dateB" min="2018-01-01" />
+                </div>
+              </div>
+              <div id="change-window-wrap" style="margin-top:8px;">
+                <small class="field-caption">Window (+/- days around each date for change detection)</small>
+                <input type="number" id="windowDays" min="1" max="180" value="30" />
+              </div>
+              <div id="summary-analysis-trigger-wrap" class="summary-analysis-trigger-wrap" style="display:none;">
+                <button
+                  type="button"
+                  class="summary-show-btn"
+                  id="btnSummaryAnalysisToggle"
+                  aria-expanded="false"
+                  aria-controls="change-analysis-footer"
+                >
+                  Show summary analysis
+                </button>
+              </div>
+            </div>
+            <div class="toolbar-field city-field">
+              <label for="city">Region</label>
+              <div class="city-autocomplete-wrap">
+                <input
+                  id="city"
+                  type="text"
+                  placeholder="City or area… (optional on Home)"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-autocomplete="list"
+                  aria-controls="city-suggestions"
+                  aria-expanded="false"
+                />
+                <div id="city-suggestions" class="city-suggestions" role="listbox" hidden></div>
+              </div>
+              <div class="field-caption">Home: empty region = world view. Chat can set location.</div>
+              <div id="region-chip-wrap" class="region-chip-wrap" hidden>
+                <span class="region-chip" id="region-chip-label"></span>
+                <button type="button" id="region-chip-clear" title="Clear region and return to world view">×</button>
+              </div>
+            </div>
+            <div class="toolbar-field prediction-controls-panel" id="prediction-controls-panel">
+              <label for="prediction-region">Prediction input</label>
+              <div class="field-caption">Choose region and date from available prediction image files.</div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div>
+                  <small class="field-caption">Region</small>
+                  <select id="prediction-region">
+                    <option value="">Select region</option>
+                  </select>
+                </div>
+                <div>
+                  <small class="field-caption">Date</small>
+                  <select id="prediction-date">
+                    <option value="">Select date</option>
+                  </select>
+                </div>
+                <button id="show-prediction-btn" type="button" class="video-btn" style="width:100%; margin-top:4px;">
+                  Show Prediction
+                </button>
+              </div>
+            </div>
+            <div id="video-tools" class="video-inline" style="display:none;">
+              <label>Time series video</label>
+              <div class="video-cadence-row" role="radiogroup" aria-label="Video frame cadence">
+                <p class="field-caption" style="margin-bottom:6px;">One frame per month or per week from Date A through Date B.</p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                  <label class="monitor-radio" style="margin:0;">
+                    <input type="radio" name="video-cadence" value="monthly" checked />
+                    <span>Monthly</span>
+                  </label>
+                  <label class="monitor-radio" style="margin:0;">
+                    <input type="radio" name="video-cadence" value="weekly" />
+                    <span>Weekly</span>
+                  </label>
+                </div>
+              </div>
+              <button id="generate-video-btn" type="button" class="video-btn" style="width:100%; margin-bottom:6px;">
+                Generate video
+              </button>
+              <a
+                id="video-download-link"
+                style="display:none;"
+                download="timeseries.mp4"
+              ></a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <main class="map-stage">
+        <div class="map-container">
+          <div class="map-grid single-map-mode" id="map-grid-root">
+          <div class="map-grid-row">
+            <div class="map-panel" id="map-panel-a">
+              <div class="map-panel-header map-panel-header-row">
+                <span class="map-panel-title" id="map-panel-a-label">Map</span>
+                <button type="button" class="map-download-btn" id="btn-download-map-a">Download</button>
+              </div>
+              <div class="map-inner">
+                <div id="mapA"></div>
+                <div class="prediction-view" id="prediction-view" hidden>
+                  <div id="prediction-grid" class="prediction-grid" hidden>
+                    <div class="prediction-card">
+                      <div id="comparison-label" class="prediction-card-title">Comparison</div>
+                      <img id="comparison-image" class="prediction-image" alt="Comparison image" hidden />
+                    </div>
+                    <div class="prediction-card">
+                      <div class="prediction-card-title">Prediction</div>
+                      <img id="prediction-image" class="prediction-image" alt="Prediction image" hidden />
+                    </div>
+                  </div>
+                  <div id="prediction-msg" class="prediction-msg">Select region and date, then click Show Prediction.</div>
+                </div>
+                <div class="video-preview" id="video-preview" hidden>
+                  <div class="video-preview-head">
+                    <span id="video-preview-title">Time series preview</span>
+                    <button type="button" class="video-preview-close" id="video-preview-close">Close</button>
+                  </div>
+                  <video id="video-preview-player" controls autoplay loop muted playsinline></video>
+                </div>
+              </div>
+            </div>
+            <div class="map-panel" id="map-panel-b">
+              <div class="map-panel-header map-panel-header-row">
+                <span class="map-panel-title" id="map-panel-b-label">Map B</span>
+                <button type="button" class="map-download-btn" id="btn-download-map-b">Download</button>
+              </div>
+              <div class="map-inner"><div id="mapB"></div></div>
+            </div>
+          </div>
+          <div class="map-legend" id="map-legend"></div>
+          <div class="map-panel" id="map-panel-c" hidden>
+            <div class="map-panel-header map-panel-header-row">
+              <span class="map-panel-title" id="map-panel-c-label">Change</span>
+              <button type="button" class="map-download-btn" id="btn-download-map-c">Download</button>
+            </div>
+            <div class="map-inner"><div id="mapC"></div></div>
+          </div>
+        </div>
+        </div>
+      </main>
+      <aside class="assistant-dock" id="assistant-dock" aria-label="AI Help Assistant">
+        <div class="assistant-dock-head">
+          <div class="assistant-head-left">
+            <span class="assistant-dock-title">AI Help</span>
+            <span class="chat-loading" id="chat-loading-indicator" aria-live="polite">
+              <span class="chat-loading-dot"></span>
+              <span>Thinking</span>
+            </span>
+          </div>
+          <button type="button" class="assistant-dock-close" id="help-close-btn">Close</button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="message bot">
+            <div class="bubble bot" title="Welcome to TerraScope AI">
+              Hi there! I'm your TerraScope assistant. Ask me anything about the map, land cover changes, or how to use the app.
+            </div>
+          </div>
+        </div>
+        <form class="chat-form" onsubmit="handleChatSubmit(event)">
+          <input
+            type="text"
+            id="chat-input"
+            class="chat-input"
+            placeholder="Ask for guidance..."
+            autocomplete="off"
+          />
+          <button type="submit" class="chat-send">Send</button>
+        </form>
+      </aside>
+    </div>
+    <footer id="change-analysis-footer" hidden>
+      <div class="summary-footer-head">
+        <strong>Summary Analysis</strong>
+        <button
+          type="button"
+          class="summary-minimize-btn"
+          id="btnSummaryMinimize"
+          aria-expanded="true"
+          aria-controls="summary-body"
+          title="Minimize"
+        >
+          −
+        </button>
+      </div>
+      <div id="summary-body" class="summary-body">
+        <div id="summary">Run Generate to load statistics.</div>
+        <button type="button" class="secondary" id="btnReport">Generate Report</button>
+      </div>
+    </footer>
+    <div id="reportBox" aria-hidden="true">
+      <div id="reportInner">
+        <div class="report-top">
+          <h2>Change detection report</h2>
+          <button type="button" class="btn-close" id="btnClose">Close</button>
+        </div>
+        <div id="reportContent"></div>
+      </div>
+    </div>
+    <div id="globalLoading" aria-hidden="true">
+      <div class="loading-pill">
+        <span class="loading-spinner"></span>
+        <span>Loading...</span>
+      </div>
+    </div>
+  </div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+
+  <script>
+    const API_BASE = "";
+    let lastMapData = null;
+    let lastChangeStats = null;
+    let lastVideoUrl = null;
+    let busyCount = 0;
+    let citySuggestTimer = null;
+    let citySuggestSeq = 0;
+    let citySuggestHighlight = -1;
+    let citySuggestItems = [];
+    const PREDICTION_IMAGE_BASE_URL =
+      "https://raw.githubusercontent.com/abeerelamin/senior2/main/prediction_assets/";
+    const PREDICTION_AVAILABLE_FILENAMES = [
+      "abudhabi_2026-04-18_predicted_full_rgb.png",
+      "abudhabi_2026-04-25_predicted_full_rgb.png",
+      "abudhabi_2026-05-02_predicted_full_rgb.png",
+      "abudhabi_2026-05-09_predicted_full_rgb.png",
+      "abudhabi_2026-05-16_predicted_full_rgb.png",
+      "abudhabi_2026-05-22_predicted_full_rgb.png",
+      "abudhabi_2026-05-29_predicted_full_rgb.png",
+      "abudhabi_2026-06-05_predicted_full_rgb.png",
+
+      "alqueva_2026-04-18_predicted_full_rgb.png",
+      "alqueva_2026-04-25_predicted_full_rgb.png",
+      "alqueva_2026-05-02_predicted_full_rgb.png",
+      "alqueva_2026-05-09_predicted_full_rgb.png",
+      "alqueva_2026-05-16_predicted_full_rgb.png",
+      "alqueva_2026-05-22_predicted_full_rgb.png",
+      "alqueva_2026-05-29_predicted_full_rgb.png",
+      "alqueva_2026-06-05_predicted_full_rgb.png",
+
+      "donana_2026-04-18_predicted_full_rgb.png",
+      "donana_2026-04-25_predicted_full_rgb.png",
+      "donana_2026-05-02_predicted_full_rgb.png",
+      "donana_2026-05-09_predicted_full_rgb.png",
+      "donana_2026-05-16_predicted_full_rgb.png",
+      "donana_2026-05-22_predicted_full_rgb.png",
+      "donana_2026-05-29_predicted_full_rgb.png",
+      "donana_2026-06-05_predicted_full_rgb.png",
+
+      "dubai_2026-04-18_predicted_full_rgb.png",
+      "dubai_2026-04-25_predicted_full_rgb.png",
+      "dubai_2026-05-02_predicted_full_rgb.png",
+      "dubai_2026-05-09_predicted_full_rgb.png",
+      "dubai_2026-05-16_predicted_full_rgb.png",
+      "dubai_2026-05-22_predicted_full_rgb.png",
+      "dubai_2026-05-29_predicted_full_rgb.png",
+      "dubai_2026-06-05_predicted_full_rgb.png",
+
+      "segura_2026-04-18_predicted_full_rgb.png",
+      "segura_2026-04-25_predicted_full_rgb.png",
+      "segura_2026-05-02_predicted_full_rgb.png",
+      "segura_2026-05-09_predicted_full_rgb.png",
+      "segura_2026-05-16_predicted_full_rgb.png",
+      "segura_2026-05-22_predicted_full_rgb.png",
+      "segura_2026-05-29_predicted_full_rgb.png",
+      "segura_2026-06-05_predicted_full_rgb.png",
+    ];
+    const predictionDatesByRegion = new Map();
+
+    const DW_CLASSES = [
+      { label: "Water", color: "#419bdf" },
+      { label: "Trees", color: "#397d49" },
+      { label: "Grass", color: "#88b053" },
+      { label: "Flooded Vegetation", color: "#7a87c6" },
+      { label: "Crops", color: "#e49635" },
+      { label: "Shrub & Scrub", color: "#dfc35a" },
+      { label: "Built Area", color: "#c4281b" },
+      { label: "Bare Ground", color: "#a59b8f" },
+      { label: "Snow & Ice", color: "#b39fe1" },
+    ];
+
+    function beginLoading() {
+      busyCount += 1;
+      const box = document.getElementById("globalLoading");
+      if (box) box.classList.add("show");
+    }
+
+    function endLoading() {
+      busyCount = Math.max(0, busyCount - 1);
+      if (busyCount === 0) {
+        const box = document.getElementById("globalLoading");
+        if (box) box.classList.remove("show");
+      }
+    }
+
+    function beginChatLoading() {
+      const el = document.getElementById("chat-loading-indicator");
+      if (el) el.classList.add("show");
+    }
+
+    function endChatLoading() {
+      const el = document.getElementById("chat-loading-indicator");
+      if (el) el.classList.remove("show");
+    }
+
+    const FLOOD_SPOTS = [
+      {
+        preset_id: "ae-abu",
+        name: "UAE (Abu Dhabi)",
+        line: "Flash flood · Mar-May 2024",
+        lat: 24.4539,
+        lon: 54.3773,
+      },
+      {
+        preset_id: "es-donana",
+        name: "Spain (Donana)",
+        line: "Drought / heatwave · Jun-Aug 2023",
+        lat: 37.03,
+        lon: -6.43,
+      },
+      {
+        preset_id: "in-monsoon",
+        name: "India (Assam)",
+        line: "Monsoon flood · May-Aug 2023",
+        lat: 26.2,
+        lon: 91.7,
+      },
+      {
+        preset_id: "pt-storm",
+        name: "Portugal (Lisbon)",
+        line: "Storm / flood · Nov 2022-Jan 2023",
+        lat: 38.7223,
+        lon: -9.1393,
+      },
+      {
+        preset_id: "de-ahr",
+        name: "Germany (Ahr Valley)",
+        line: "Major flood · Jun-Aug 2021",
+        lat: 50.52,
+        lon: 7.1,
+      },
+    ];
+
+    const CHANGE_PRESET_OPTIONS = [
+      {
+        id: "ae-abu",
+        title: "UAE (Abu Dhabi)",
+        line: "Flash flood · Mar-May 2024",
+        region: "Abu Dhabi, United Arab Emirates",
+        date1: "2024-03-01",
+        date2: "2024-05-31",
+        window: 30,
+      },
+      {
+        id: "es-donana",
+        title: "Spain (Donana)",
+        line: "Drought / heatwave · Jun-Aug 2023",
+        region: "Donana National Park, Spain",
+        date1: "2023-06-01",
+        date2: "2023-08-31",
+        window: 30,
+      },
+      {
+        id: "in-monsoon",
+        title: "India (Assam)",
+        line: "Monsoon flood · May-Aug 2023",
+        region: "Assam, India",
+        date1: "2023-05-01",
+        date2: "2023-08-31",
+        window: 30,
+      },
+      {
+        id: "pt-storm",
+        title: "Portugal (Lisbon)",
+        line: "Storm / flood · Nov 2022-Jan 2023",
+        region: "Lisbon, Portugal",
+        date1: "2022-11-01",
+        date2: "2023-01-31",
+        window: 30,
+      },
+      {
+        id: "de-ahr",
+        title: "Germany (Ahr Valley)",
+        line: "Major flood · Jun-Aug 2021",
+        region: "Ahr Valley, Rhineland-Palatinate, Germany",
+        region_bbox: "6.3,50.2,7.6,51.2",
+        date1: "2021-06-15",
+        date2: "2021-08-15",
+        window: 15,
+      },
+    ];
+
+    let selectedChangePresetId = null;
+    let selectedChangePresetRegionBbox = null;
+
+    function clearChangePresetSelection() {
+      selectedChangePresetId = null;
+      selectedChangePresetRegionBbox = null;
+      const grid = document.getElementById("changePresetGrid");
+      if (!grid) return;
+      grid.querySelectorAll(".preset-card").forEach((c) => c.classList.remove("selected"));
+    }
+
+    function applyChangePreset(preset, triggerLoad = true) {
+      selectedChangePresetId = preset.id;
+      selectedChangePresetRegionBbox = preset.region_bbox || null;
+
+      const dateA = document.getElementById("dateA");
+      const dateB = document.getElementById("dateB");
+      const windowDays = document.getElementById("windowDays");
+      const cityEl = document.getElementById("city");
+      const changeMode = document.querySelector('input[name="mode"][value="change_detection"]');
+
+      const savedBbox = selectedChangePresetRegionBbox;
+      dateA.value = preset.date1;
+      dateB.value = preset.date2;
+      windowDays.value = String(preset.window || 30);
+      cityEl.value = preset.region;
+      if (changeMode) changeMode.checked = true;
+      selectedChangePresetRegionBbox = savedBbox;
+      selectedChangePresetId = preset.id;
+
+      const grid = document.getElementById("changePresetGrid");
+      if (grid) {
+        grid.querySelectorAll(".preset-card").forEach((c) => {
+          c.classList.toggle("selected", c.dataset.presetId === preset.id);
+        });
+      }
+
+      updateDateUIForMode();
+      updateVideoToolsVisibility();
+      if (triggerLoad) loadMapFromBackend();
+    }
+
+    function buildChangePresetGrid() {
+      const grid = document.getElementById("changePresetGrid");
+      if (!grid) return;
+      grid.innerHTML = "";
+      CHANGE_PRESET_OPTIONS.forEach((preset) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "preset-card";
+        btn.dataset.presetId = preset.id;
+        btn.setAttribute("aria-label", preset.title + ": " + preset.line);
+        btn.innerHTML =
+          "<strong>" + preset.title + "</strong>" +
+          "<span>" + preset.line + "</span>";
+        btn.addEventListener("click", () => applyChangePreset(preset));
+        grid.appendChild(btn);
+      });
+    }
+
+    function getPresetById(presetId) {
+      return CHANGE_PRESET_OPTIONS.find((p) => p.id === presetId) || null;
+    }
+
+    function truncatePopupLine(text, maxLen) {
+      const raw = String(text || "").replace(/\s+/g, " ").trim();
+      if (!raw) return "";
+      if (raw.length <= maxLen) return raw;
+      return raw.slice(0, Math.max(0, maxLen - 1)).trimEnd() + "…";
+    }
+
+    function buildHomeSpotPopupHtml(spot, stats, loading, errorText, reportData) {
+      const title = "<strong>" + escapeHtml(spot.name) + "</strong><br><small>" + escapeHtml(spot.line || "") + "</small>";
+      if (loading) return title + "<br><small>Loading change summary...</small>";
+      if (errorText) return title + "<br><small style=\"color:#fecaca;\">" + escapeHtml(errorText) + "</small>";
+      if (!stats) return title + "<br><small>No summary available.</small>";
+      const narrative = reportData && reportData.narrative ? reportData.narrative : {};
+      const line1 = truncatePopupLine(narrative.what_changed || "", 145);
+      const line2 = truncatePopupLine(narrative.risk_meaning || "", 145);
+      const reportSummaryHtml =
+        line1 || line2
+          ? "<br><small>" + escapeHtml(line1 || "Change analysis is ready.") + "</small>" +
+            "<br><small>" + escapeHtml(line2 || "Tap below to view full report.") + "</small>"
+          : "<br><small>Report summary unavailable. Open full report for details.</small>";
+      return (
+        title +
+        "<br><small>Changed: " +
+        stats.change_percent +
+        "% · Risk: " +
+        escapeHtml(stats.risk_level || "") +
+        "</small>" +
+        reportSummaryHtml +
+        "<br><button type=\"button\" class=\"secondary\" style=\"margin-top:8px;padding:0.35rem 0.6rem;font-size:0.75rem;\" onclick=\"openHomeSpotReport('" +
+        spot.preset_id +
+        "')\">Switch to Change mode + open report</button>"
+      );
+    }
+
+    async function fetchPresetChangeStatsForHome(preset) {
+      const res = await fetch(`${API_BASE}/api/change-detection`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date1: preset.date1,
+          date2: preset.date2,
+          region: preset.region_bbox || null,
+          region_name: preset.region,
+          window_days: preset.window || 30,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || res.statusText);
+      return data;
+    }
+
+    async function fetchPresetReportForHome(preset, stats) {
+      const res = await fetch(`${API_BASE}/api/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          region: preset.region || (stats && stats.region_label) || "",
+          date_range: { start: preset.date1, end: preset.date2 },
+          change_stats: stats,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || res.statusText);
+      return data;
+    }
+
+    async function openHomeSpotReport(presetId) {
+      beginLoading();
+      try {
+      const preset = getPresetById(presetId);
+      if (!preset) return;
+      applyChangePreset(preset, false);
+      await loadChangeDetectionMode(getUIState());
+      const stats = lastChangeStats;
+      if (!stats) return;
+      const box = document.getElementById("reportBox");
+      const el = document.getElementById("reportContent");
+      el.innerHTML = '<div class="card"><p>Generating…</p></div>';
+      box.classList.add("show");
+      try {
+        const res = await fetch(`${API_BASE}/api/report`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            region: preset.region || stats.region_label,
+            date_range: { start: preset.date1, end: preset.date2 },
+            change_stats: stats,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        renderReport(data);
+      } catch (err) {
+        el.innerHTML = '<div class="card err-box">Error: ' + escapeHtml(err.message) + "</div>";
+      }
+      } finally {
+        endLoading();
+      }
+    }
+    window.openHomeSpotReport = openHomeSpotReport;
+
+    function initDateInputs() {
+      const da = document.getElementById("dateA");
+      const db = document.getElementById("dateB");
+      const today = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const toIso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const mx = toIso(today);
+      da.setAttribute("max", mx);
+      db.setAttribute("max", mx);
+      const a = new Date(today);
+      a.setDate(a.getDate() - 14);
+      if (!da.value) da.value = toIso(a);
+      if (!db.value) db.value = toIso(today);
+    }
+
+    const defaultCenter = [26.3, 55.28];
+    const SAT_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+
+    const satelliteA = L.tileLayer(SAT_URL, {
+      attribution: "Esri & others",
+      maxZoom: 19,
+      crossOrigin: true,
+    });
+
+    const satelliteB = L.tileLayer(SAT_URL, {
+      attribution: "Esri & others",
+      maxZoom: 19,
+      crossOrigin: true,
+    });
+
+    const mapA = L.map("mapA", {
+      center: defaultCenter,
+      zoom: 3,
+      layers: [satelliteA]
+    });
+
+    const mapB = L.map("mapB", {
+      center: defaultCenter,
+      zoom: 3,
+      layers: [satelliteB]
+    });
+
+    const floodSpotsLayerA = L.layerGroup();
+    FLOOD_SPOTS.forEach((spot) => {
+      const marker = L.circleMarker([spot.lat, spot.lon], {
+        radius: 6,
+        color: "#0f172a",
+        weight: 1.5,
+        fillColor: "#22d3ee",
+        fillOpacity: 0.9,
+      });
+      marker.bindPopup(buildHomeSpotPopupHtml(spot, null, true, null), { maxWidth: 290 });
+      marker.on("click", async () => {
+        beginLoading();
+        marker.setPopupContent(buildHomeSpotPopupHtml(spot, null, true, null));
+        try {
+          const preset = getPresetById(spot.preset_id);
+          if (!preset) throw new Error("Preset not found");
+          const stats = await fetchPresetChangeStatsForHome(preset);
+          const reportData = await fetchPresetReportForHome(preset, stats);
+          marker.setPopupContent(buildHomeSpotPopupHtml(spot, stats, false, null, reportData));
+        } catch (err) {
+          marker.setPopupContent(
+            buildHomeSpotPopupHtml(spot, null, false, err && err.message ? err.message : "Failed to load summary")
+          );
+        } finally {
+          endLoading();
+        }
+      });
+      floodSpotsLayerA.addLayer(marker);
+    });
+
+    let mapC = null;
+    let satelliteC = null;
+
+    function ensureMapC() {
+      if (mapC) return;
+      satelliteC = L.tileLayer(SAT_URL, {
+        attribution: "Esri & others",
+        maxZoom: 19,
+        crossOrigin: true,
+      });
+      mapC = L.map("mapC", {
+        center: defaultCenter,
+        zoom: 3,
+        layers: [satelliteC],
+      });
+    }
+
+    let dwLayerA = null;
+    let dwLayerB = null;
+    let dwLayerChangeA = null;
+    let dwLayerChangeC = null;
+    let changeOverlayA = null;
+    let changeOverlayB = null;
+    let changeMaskOverlayC = null;
+    let layerControlA = null;
+    let layerControlB = null;
+    let layerControlC = null;
+    let classLegendControlB = null;
+    let changeLegendControlC = null;
+    let _mapLoadGen = 0;
+
+    function currentMode() {
+      const r = document.querySelector('input[name="mode"]:checked');
+      return r ? r.value : "home";
+    }
+
+    function makeLegendControl(position, html) {
+      const Ctl = L.Control.extend({
+        options: { position: position || "topright" },
+        onAdd: function () {
+          const div = L.DomUtil.create("div", "custom-map-legend");
+          div.innerHTML = html;
+          L.DomEvent.disableClickPropagation(div);
+          return div;
+        },
+      });
+      return new Ctl();
+    }
+
+    function buildClassLegendHorizontalHtml() {
+      return DW_CLASSES.map((c) =>
+        `<div class="map-legend-item"><span class="map-legend-swatch" style="background:${c.color};"></span><span class="map-legend-label">${c.label}</span></div>`
+      ).join("");
+    }
+
+    function buildLegend() {
+      const legend = document.getElementById("map-legend");
+      if (legend) legend.innerHTML = buildClassLegendHorizontalHtml();
+    }
+    buildLegend();
+
+    function buildChangeOnlyLegendHtml() {
+      return `<div class="map-inline-legend single"><div class="map-legend-title">Change mask</div><div class="map-legend-item"><span class="map-legend-swatch" style="background:#ff00ff;border-color:#d946ef;"></span><span class="map-legend-label">Change</span></div></div>`;
+    }
+
+    function syncChangeModeLegends(isChangeMode) {
+      if (isChangeMode) {
+        if (mapB && classLegendControlB) {
+          mapB.removeControl(classLegendControlB);
+          classLegendControlB = null;
+        }
+        if (mapC && !changeLegendControlC) {
+          changeLegendControlC = makeLegendControl("topright", buildChangeOnlyLegendHtml());
+          changeLegendControlC.addTo(mapC);
+        }
+      } else {
+        if (mapB && classLegendControlB) {
+          mapB.removeControl(classLegendControlB);
+          classLegendControlB = null;
+        }
+        if (mapC && changeLegendControlC) {
+          mapC.removeControl(changeLegendControlC);
+          changeLegendControlC = null;
+        }
+      }
+    }
+
+    function updateDateUIForMode() {
+      const mode = currentMode();
+      const dateControls = document.getElementById("date-controls-row");
+      const cityField = document.querySelector(".city-field");
+      const bBox = document.getElementById("dateB-container");
+      const presetsWrap = document.querySelector(".change-presets");
+      const presetsPanel = document.getElementById("change-presets-panel");
+      const predictionPanel = document.getElementById("prediction-controls-panel");
+      const windowWrap = document.getElementById("change-window-wrap");
+      const summaryTrig = document.getElementById("summary-analysis-trigger-wrap");
+      const showPredictionOnly = mode === "prediction";
+      if (dateControls) dateControls.style.display = showPredictionOnly ? "none" : "block";
+      if (cityField) cityField.style.display = showPredictionOnly ? "none" : "block";
+      if (predictionPanel) predictionPanel.style.display = showPredictionOnly ? "block" : "none";
+      if (mode === "home") {
+        bBox.style.display = "none";
+      } else {
+        bBox.style.display = "block";
+      }
+      const showChangeOnly = mode === "change_detection";
+      if (presetsWrap) presetsWrap.style.display = showChangeOnly ? "block" : "none";
+      if (presetsPanel) presetsPanel.style.display = showChangeOnly ? "block" : "none";
+      if (windowWrap) windowWrap.style.display = showChangeOnly ? "block" : "none";
+      if (summaryTrig) summaryTrig.style.display = showChangeOnly ? "block" : "none";
+      if (showChangeOnly) syncSummaryAnalysisToggleLabel();
+    }
+
+    function updateVideoToolsVisibility() {
+      const tools = document.getElementById("video-tools");
+      tools.style.display = currentMode() === "timeseries" ? "block" : "none";
+    }
+
+    function parsePredictionFilename(name) {
+      const m = /^(.+)_((?:19|20)\d{2}-\d{2}-\d{2})_predicted_full_rgb\.png$/i.exec(String(name || "").trim());
+      if (!m) return null;
+      return { region: m[1].toLowerCase(), date: m[2] };
+    }
+
+    function predictionRegionLabel(region) {
+      return String(region || "")
+        .replace(/[_\-]+/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    function buildPredictionFilename(region, date) {
+      return `${region}_${date}_predicted_full_rgb.png`;
+    }
+
+    function showPredictionMessage(text, isError) {
+      const msg = document.getElementById("prediction-msg");
+      if (!msg) return;
+      msg.textContent = text || "";
+      msg.classList.toggle("error", !!isError);
+      msg.hidden = false;
+    }
+
+    function populatePredictionRegionOptions() {
+      predictionDatesByRegion.clear();
+      PREDICTION_AVAILABLE_FILENAMES.forEach((f) => {
+        const p = parsePredictionFilename(f);
+        if (!p) return;
+        if (!predictionDatesByRegion.has(p.region)) predictionDatesByRegion.set(p.region, new Set());
+        predictionDatesByRegion.get(p.region).add(p.date);
+      });
+      const regionSelect = document.getElementById("prediction-region");
+      if (!regionSelect) return;
+      regionSelect.innerHTML = '<option value="">Select region</option>';
+      Array.from(predictionDatesByRegion.keys())
+        .sort((a, b) => a.localeCompare(b))
+        .forEach((r) => {
+          const opt = document.createElement("option");
+          opt.value = r;
+          opt.textContent = predictionRegionLabel(r);
+          regionSelect.appendChild(opt);
+        });
+    }
+
+    function updatePredictionDateOptions() {
+      const regionSelect = document.getElementById("prediction-region");
+      const dateSelect = document.getElementById("prediction-date");
+      if (!regionSelect || !dateSelect) return;
+      const region = String(regionSelect.value || "").trim().toLowerCase();
+      const prev = dateSelect.value;
+      dateSelect.innerHTML = '<option value="">Select date</option>';
+      const dates = predictionDatesByRegion.has(region)
+        ? Array.from(predictionDatesByRegion.get(region))
+        : [];
+      dates.sort((a, b) => a.localeCompare(b)).forEach((d) => {
+        const opt = document.createElement("option");
+        opt.value = d;
+        opt.textContent = d;
+        dateSelect.appendChild(opt);
+      });
+      if (dates.includes(prev)) {
+        dateSelect.value = prev;
+      } else {
+        dateSelect.value = "";
+      }
+    }
+
+    function getActualImageUrl(region) {
+      return PREDICTION_IMAGE_BASE_URL + `${region}_actual.png`;
+    }
+
+    function getCurrentImageUrl(region) {
+      return PREDICTION_IMAGE_BASE_URL + `${region}_current.png`;
+    }
+
+    function preloadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(url);
+        img.onerror = () => reject(new Error("Failed to load: " + url));
+        img.src = url + (url.includes("?") ? "&" : "?") + "v=" + Date.now();
+      });
+    }
+
+    async function loadPredictionImageFromSelection() {
+      const region = document.getElementById("prediction-region").value;
+      const date = document.getElementById("prediction-date").value;
+
+      const predImg = document.getElementById("prediction-image");
+      const compImg = document.getElementById("comparison-image");
+      const grid = document.getElementById("prediction-grid");
+      const label = document.getElementById("comparison-label");
+      const msg = document.getElementById("prediction-msg");
+
+      if (predImg) { predImg.hidden = true; predImg.removeAttribute("src"); }
+      if (compImg) { compImg.hidden = true; compImg.removeAttribute("src"); }
+      if (grid) grid.hidden = true;
+
+      if (!region || !date) {
+        showPredictionMessage("Select region and date, then click Show Prediction.", false);
+        return;
+      }
+
+      const predictionUrl = PREDICTION_IMAGE_BASE_URL + buildPredictionFilename(region, date);
+      const today = new Date().toISOString().slice(0, 10);
+
+      let comparisonUrl;
+      let comparisonText;
+      if (date <= today) {
+        comparisonUrl = getActualImageUrl(region);
+        comparisonText = "Actual";
+      } else {
+        comparisonUrl = getCurrentImageUrl(region);
+        comparisonText = "Current";
+      }
+
+      showPredictionMessage("Loading prediction...", false);
+
+      try {
+        const [comparisonLoadedUrl, predictionLoadedUrl] = await Promise.all([
+          preloadImage(comparisonUrl),
+          preloadImage(predictionUrl)
+        ]);
+
+        compImg.src = comparisonLoadedUrl;
+        predImg.src = predictionLoadedUrl;
+
+        compImg.hidden = false;
+        predImg.hidden = false;
+        grid.hidden = false;
+        msg.hidden = true;
+
+        label.textContent = `${comparisonText} · Prediction: ${date}`;
+      } catch (err) {
+        showPredictionMessage("Images not available for this region and date.", true);
+        console.error("Prediction image load error:", err);
+      }
+    }
+
+    async function downloadPredictionImages() {
+      const compImg = document.getElementById("comparison-image");
+      const predImg = document.getElementById("prediction-image");
+      const region = document.getElementById("prediction-region").value || "region";
+      const date = document.getElementById("prediction-date").value || "date";
+      const prefix = `terrascope_${region}_${date}`;
+
+      if ((!compImg || compImg.hidden) && (!predImg || predImg.hidden)) {
+        alert("No prediction images loaded. Select region and date, then click Show Prediction first.");
+        return;
+      }
+
+      async function fetchAndDownload(url, filename) {
+        try {
+          const res = await fetch(url);
+          const blob = await res.blob();
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = filename;
+          a.click();
+          URL.revokeObjectURL(a.href);
+        } catch (e) {
+          console.error("Download failed for", url, e);
+        }
+      }
+
+      if (compImg && !compImg.hidden && compImg.src) {
+        await fetchAndDownload(compImg.src, `${prefix}_actual.png`);
+      }
+      if (predImg && !predImg.hidden && predImg.src) {
+        await fetchAndDownload(predImg.src, `${prefix}_prediction.png`);
+      }
+    }
+
+    function renderPredictionModeOnlyView() {
+      const mapGridRoot = document.getElementById("map-grid-root");
+      const panelA = document.getElementById("map-panel-a");
+      const panelB = document.getElementById("map-panel-b");
+      const panelC = document.getElementById("map-panel-c");
+      const changeFooter = document.getElementById("change-analysis-footer");
+      const labelA = document.getElementById("map-panel-a-label");
+      const chipWrap = document.getElementById("region-chip-wrap");
+      const mapAEl = document.getElementById("mapA");
+      const predictionView = document.getElementById("prediction-view");
+
+      mapGridRoot.classList.add("single-map-mode");
+      mapGridRoot.classList.remove("has-change-row");
+      panelB.hidden = true;
+      panelC.hidden = true;
+      if (changeFooter) changeFooter.hidden = true;
+      panelA.style.display = "flex";
+      panelB.style.display = "none";
+      labelA.textContent = "Prediction";
+
+      if (chipWrap) chipWrap.hidden = true;
+      if (mapAEl) mapAEl.style.display = "none";
+      if (predictionView) predictionView.hidden = false;
+
+      if (mapA.hasLayer(floodSpotsLayerA)) mapA.removeLayer(floodSpotsLayerA);
+      if (dwLayerA && mapA.hasLayer(dwLayerA)) mapA.removeLayer(dwLayerA);
+      if (dwLayerB && mapA.hasLayer(dwLayerB)) mapA.removeLayer(dwLayerB);
+      if (dwLayerChangeA && mapA.hasLayer(dwLayerChangeA)) mapA.removeLayer(dwLayerChangeA);
+      if (changeOverlayA && mapA.hasLayer(changeOverlayA)) mapA.removeLayer(changeOverlayA);
+      if (changeOverlayB && mapB.hasLayer(changeOverlayB)) mapB.removeLayer(changeOverlayB);
+      if (mapC && changeMaskOverlayC && mapC.hasLayer(changeMaskOverlayC)) mapC.removeLayer(changeMaskOverlayC);
+
+      dwLayerA = null;
+      dwLayerB = null;
+      dwLayerChangeA = null;
+      changeOverlayA = null;
+      changeOverlayB = null;
+      changeMaskOverlayC = null;
+      lastChangeStats = null;
+      clearSummaryFromChangeStats();
+
+      if (layerControlA) mapA.removeControl(layerControlA);
+      layerControlA = L.control.layers({ "Original Satellite": satelliteA }, {}, { position: "topleft" }).addTo(mapA);
+      if (layerControlB) {
+        mapB.removeControl(layerControlB);
+        layerControlB = null;
+      }
+      if (layerControlC && mapC) {
+        mapC.removeControl(layerControlC);
+        layerControlC = null;
+      }
+
+      syncChangeModeLegends(false);
+      const mapLegendGlobal = document.getElementById("map-legend");
+      if (mapLegendGlobal) mapLegendGlobal.style.display = "none";
+
+      setTimeout(() => {
+        mapA.invalidateSize();
+        mapB.invalidateSize();
+        if (mapC) mapC.invalidateSize();
+      }, 120);
+    }
+
+    function showVideoPreview(url, title) {
+      const wrap = document.getElementById("video-preview");
+      const player = document.getElementById("video-preview-player");
+      const titleEl = document.getElementById("video-preview-title");
+      if (!wrap || !player) return;
+      if (lastVideoUrl && lastVideoUrl !== url) {
+        URL.revokeObjectURL(lastVideoUrl);
+      }
+      lastVideoUrl = url;
+      player.src = url;
+      player.load();
+      player.play().catch(() => {});
+      titleEl.textContent = title || "Time series preview";
+      wrap.hidden = false;
+    }
+
+    function hideVideoPreview() {
+      const wrap = document.getElementById("video-preview");
+      const player = document.getElementById("video-preview-player");
+      if (!wrap || !player) return;
+      wrap.hidden = true;
+      player.pause();
+    }
+
+    function modeToLabel(v) {
+      if (v === "home") return "Home";
+      if (v === "change_detection") return "Change Detection";
+      if (v === "timeseries") return "Time Series";
+      if (v === "prediction") return "Prediction";
+      return v;
+    }
+
+    function getUIState() {
+      return {
+        mode: currentMode(),
+        date_a: document.getElementById("dateA").value,
+        date_b: document.getElementById("dateB").value,
+        city: document.getElementById("city").value || "",
+        region_bbox: selectedChangePresetRegionBbox,
+        window_days: Number(document.getElementById("windowDays").value || 30),
+      };
+    }
+
+    function applyChatTextToControls(text) {
+      const t = text.toLowerCase().trim();
+      if (!t) return;
+
+      const dateA = document.getElementById("dateA");
+      const dateB = document.getElementById("dateB");
+      const cityInput = document.getElementById("city");
+
+      if (t.includes("reset") && (t.includes("map") || t.includes("settings") || t.includes("all"))) {
+        document.querySelector('input[name="mode"][value="home"]').checked = true;
+        cityInput.value = "";
+      }
+
+      if ((t.includes("swap") || t.includes("switch") || t.includes("reverse") || t.includes("flip")) && (t.includes("date") || t.includes("year"))) {
+        const oldA = dateA.value;
+        dateA.value = dateB.value;
+        dateB.value = oldA;
+      }
+
+      if (t.includes("change detection") || t.includes("change analysis") || t.includes("difference")) {
+        document.querySelector('input[name="mode"][value="change_detection"]').checked = true;
+      } else if (t.includes("time series") || t.includes("timeseries") || t.includes("timeline")) {
+        document.querySelector('input[name="mode"][value="timeseries"]').checked = true;
+      } else if (t.includes("prediction") || t.includes("forecast") || t.includes("future land")) {
+        document.querySelector('input[name="mode"][value="prediction"]').checked = true;
+      } else if (t.includes("home") || t.includes("world view") || t.includes("whole world")) {
+        document.querySelector('input[name="mode"][value="home"]').checked = true;
+        if (t.includes("whole world") || t.includes("world view")) {
+          cityInput.value = "";
+        }
+      }
+
+      const isoFound = Array.from(t.matchAll(/\b(20[0-9]{2}|201[89])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])\b/g)).map(m => m[0]);
+      if (isoFound.length === 1) {
+        dateA.value = isoFound[0];
+        dateB.value = isoFound[0];
+      } else if (isoFound.length >= 2) {
+        dateA.value = isoFound[0];
+        dateB.value = isoFound[isoFound.length - 1];
+      }
+
+      const ALL_YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+      const foundYears = Array.from(t.matchAll(/\b(19[0-9]{2}|20[0-9]{2})\b/g))
+        .map(m => parseInt(m[1], 10))
+        .filter(y => ALL_YEARS.includes(y));
+      const uniqueYears = Array.from(new Set(foundYears)).sort();
+
+      if (uniqueYears.length === 1 && isoFound.length === 0) {
+        const y = uniqueYears[0];
+        dateA.value = `${y}-06-15`;
+        dateB.value = `${y}-06-15`;
+        const cm = currentMode();
+        if (cm !== "timeseries" && cm !== "prediction") {
+          document.querySelector('input[name="mode"][value="home"]').checked = true;
+        }
+      } else if (uniqueYears.length >= 2 && isoFound.length === 0) {
+        dateA.value = `${uniqueYears[0]}-01-01`;
+        dateB.value = `${uniqueYears[uniqueYears.length - 1]}-12-31`;
+        const cm = currentMode();
+        if (cm === "home") {
+          document.querySelector('input[name="mode"][value="change_detection"]').checked = true;
+        }
+      }
+
+      const locMatch = t.match(/(?:set|change)\s+(?:city|location|region)\s+to\s+(.+)/);
+      if (locMatch && locMatch[1]) {
+        cityInput.value = locMatch[1].trim();
+        return;
+      }
+
+      // Keep chat in guidance mode by default.
+      // Region is only changed with explicit phrasing (e.g. "set city/location/region to ...").
+    }
+
+    function escapeHtml(s) {
+      if (!s) return "";
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function hideCitySuggestions() {
+      const box = document.getElementById("city-suggestions");
+      const input = document.getElementById("city");
+      if (!box || !input) return;
+      box.hidden = true;
+      box.innerHTML = "";
+      citySuggestHighlight = -1;
+      citySuggestItems = [];
+      input.setAttribute("aria-expanded", "false");
+    }
+
+    function setCitySuggestionHighlight(idx) {
+      const box = document.getElementById("city-suggestions");
+      if (!box || box.hidden) return;
+      const rows = box.querySelectorAll(".city-suggestion-item");
+      if (idx < -1 || idx >= rows.length) return;
+      citySuggestHighlight = idx;
+      rows.forEach((r, i) => {
+        r.classList.toggle("active", i === idx && idx >= 0);
+      });
+    }
+
+    function applyCitySuggestion(label) {
+      const input = document.getElementById("city");
+      if (!input) return;
+      input.value = label;
+      hideCitySuggestions();
+      loadMapFromBackend();
+    }
+
+    function renderCitySuggestions(items) {
+      const box = document.getElementById("city-suggestions");
+      const input = document.getElementById("city");
+      if (!box || !input) return;
+      box.innerHTML = "";
+      citySuggestItems = items;
+      citySuggestHighlight = -1;
+      if (!items.length) {
+        box.hidden = true;
+        input.setAttribute("aria-expanded", "false");
+        return;
+      }
+      items.forEach((it) => {
+        const div = document.createElement("div");
+        div.className = "city-suggestion-item";
+        div.setAttribute("role", "option");
+        div.textContent = it.label;
+        div.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          applyCitySuggestion(it.label);
+        });
+        box.appendChild(div);
+      });
+      box.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+    }
+
+    async function fetchCitySuggestionsForInput(q) {
+      const seq = ++citySuggestSeq;
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/place-suggestions?q=${encodeURIComponent(q)}&limit=8`
+        );
+        if (seq !== citySuggestSeq) return;
+        if (!res.ok) return;
+        const data = await res.json();
+        if (seq !== citySuggestSeq) return;
+        const input = document.getElementById("city");
+        if (!input || input.value.trim() !== q) return;
+        if (!Array.isArray(data)) return;
+        renderCitySuggestions(data);
+      } catch (_e) {
+        return;
+      }
+    }
+
+    function scheduleCitySuggestions() {
+      clearTimeout(citySuggestTimer);
+      const input = document.getElementById("city");
+      if (!input) return;
+      const q = input.value.trim();
+      if (q.length < 2) {
+        hideCitySuggestions();
+        return;
+      }
+      citySuggestTimer = setTimeout(() => {
+        fetchCitySuggestionsForInput(q);
+      }, 400);
+    }
+
+    function riskIcon(level) {
+      const u = (level || "").toUpperCase();
+      if (u === "LOW") return "🟢";
+      if (u === "MEDIUM") return "🟡";
+      return "🔴";
+    }
+
+    function riskBadgeClass(level) {
+      const u = (level || "").toUpperCase();
+      if (u === "LOW") return "low";
+      if (u === "MEDIUM") return "med";
+      return "high";
+    }
+
+    function setChangeMaskOverlay(url, bounds) {
+      if (!mapC) return;
+      if (changeMaskOverlayC) {
+        mapC.removeLayer(changeMaskOverlayC);
+        changeMaskOverlayC = null;
+      }
+      if (!url || !bounds || bounds.length < 2) return;
+      const b = [[bounds[0][0], bounds[0][1]], [bounds[1][0], bounds[1][1]]];
+      changeMaskOverlayC = L.imageOverlay(url, b, {
+        opacity: 0.78,
+        interactive: false,
+        crossOrigin: true,
+      }).addTo(mapC);
+      mapC.fitBounds(b, { padding: [18, 18], maxZoom: 13 });
+    }
+
+    function setBoundedOverlay(map, previousLayer, url, bounds, opacity) {
+      if (previousLayer) {
+        map.removeLayer(previousLayer);
+      }
+      if (!url || !bounds || bounds.length < 2) return null;
+      const b = [[bounds[0][0], bounds[0][1]], [bounds[1][0], bounds[1][1]]];
+      const layer = L.imageOverlay(url, b, {
+        opacity: opacity == null ? 0.9 : opacity,
+        interactive: false,
+        crossOrigin: true,
+      }).addTo(map);
+      map.fitBounds(b, { padding: [18, 18], maxZoom: 13 });
+      return layer;
+    }
+
+    /** Same HTML as ChangeAnalysis.py INDEX_HTML after successful /api/change-detection */
+    function setSummaryFromChangeStats(data) {
+      const summaryEl = document.getElementById("summary");
+      if (!summaryEl) return;
+      if (!data) {
+        summaryEl.textContent = "Run Generate to load statistics.";
+        return;
+      }
+      const risk = String(data.risk_level || "").toUpperCase();
+      const toNum = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+      };
+      const clampPct = (v) => Math.max(0, Math.min(100, toNum(v)));
+      const changePct = clampPct(data.change_percent);
+      const waterPct = clampPct(data.water_loss_percent);
+      const vegPct = clampPct(data.vegetation_loss_percent);
+      const builtPct = clampPct(data.built_change_percent);
+
+      let html = "";
+      html += '<div class="summary-grid">';
+      html += '<div class="summary-card"><div class="label">Region</div><div class="value" style="font-size:13px;">' + escapeHtml(data.region_label || "") + "</div></div>";
+      html += '<div class="summary-card"><div class="label">Pixels changed</div><div class="value">' + changePct.toFixed(2) + "%</div></div>";
+      html += '<div class="summary-card"><div class="label">Risk</div><div class="risk-pill ' + riskBadgeClass(risk) + '">' + riskIcon(risk) + " " + escapeHtml(risk || "N/A") + "</div></div>";
+      html += "</div>";
+
+      html += '<div class="summary-metrics">';
+      html += '<div class="metric-row"><span class="metric-label">Water loss</span><div class="metric-bar water"><span style="width:' + waterPct + '%"></span></div><span class="metric-value">' + waterPct.toFixed(2) + "%</span></div>";
+      html += '<div class="metric-row"><span class="metric-label">Vegetation</span><div class="metric-bar veg"><span style="width:' + vegPct + '%"></span></div><span class="metric-value">' + vegPct.toFixed(2) + "%</span></div>";
+      html += '<div class="metric-row"><span class="metric-label">Built change</span><div class="metric-bar built"><span style="width:' + builtPct + '%"></span></div><span class="metric-value">' + builtPct.toFixed(2) + "%</span></div>";
+      html += "</div>";
+
+      html += "<p>" + escapeHtml(data.dynamic_world_note || "") + "</p>";
+
+      if (data.top_transitions && data.top_transitions.length) {
+        html += "<p><strong>Top transitions</strong></p><div class=\"transition-list\">";
+        data.top_transitions.slice(0, 8).forEach((t) => {
+          html +=
+            '<div class="transition-item"><span>' +
+            escapeHtml(t.from_name) +
+            " → " +
+            escapeHtml(t.to_name) +
+            '</span><span class="transition-pct">' +
+            toNum(t.percent_of_aoi).toFixed(2) +
+            "%</span></div>";
+        });
+        html += "</div>";
+      }
+
+      summaryEl.innerHTML = html;
+    }
+
+    function clearSummaryFromChangeStats() {
+      const summaryEl = document.getElementById("summary");
+      if (!summaryEl) return;
+      summaryEl.textContent = "Run Generate to load statistics.";
+    }
+
+    function setSummaryPanelMinimized(minimized) {
+      const footer = document.getElementById("change-analysis-footer");
+      const btn = document.getElementById("btnSummaryMinimize");
+      if (!footer || !btn) return;
+      footer.classList.toggle("is-minimized", minimized);
+      btn.setAttribute("aria-expanded", minimized ? "false" : "true");
+      btn.setAttribute("aria-label", minimized ? "Expand summary" : "Minimize summary");
+      btn.setAttribute("title", minimized ? "Expand" : "Minimize");
+      btn.textContent = minimized ? "+" : "−";
+    }
+
+    function syncSummaryAnalysisToggleLabel() {
+      const btn = document.getElementById("btnSummaryAnalysisToggle");
+      const footer = document.getElementById("change-analysis-footer");
+      if (!btn || !footer) return;
+      const hidden = footer.hidden;
+      btn.textContent = hidden ? "Show summary analysis" : "Hide summary analysis";
+      btn.setAttribute("aria-expanded", hidden ? "false" : "true");
+    }
+
+    function setChangeSummaryFooterVisible(visible) {
+      const footer = document.getElementById("change-analysis-footer");
+      if (!footer) return;
+      footer.hidden = !visible;
+      if (visible) setSummaryPanelMinimized(false);
+      syncSummaryAnalysisToggleLabel();
+    }
+
+    async function loadChangeDetectionStats(state, showLoader = true) {
+      if (showLoader) beginLoading();
+      try {
+        const date1 = String(state.date_a || "");
+        const date2 = String(state.date_b || "");
+        if (!date1 || !date2) {
+          throw new Error("Please select both dates.");
+        }
+        if (new Date(date1) >= new Date(date2)) {
+          throw new Error("Date B must be after Date A.");
+        }
+        const windowDays = Number(state.window_days || 30);
+        if (!Number.isFinite(windowDays) || windowDays < 1 || windowDays > 180) {
+          throw new Error("Window days must be between 1 and 180.");
+        }
+        const res = await fetch(`${API_BASE}/api/change-detection`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date1: date1,
+            date2: date2,
+            region: state.region_bbox || null,
+            window_days: windowDays,
+            region_name: (state.city || "").trim() || null,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        lastChangeStats = data;
+        const footerEl = document.getElementById("change-analysis-footer");
+        if (footerEl && !footerEl.hidden) setSummaryPanelMinimized(false);
+        lastMapData = {
+          mode: "change_detection",
+          city: data.region_label,
+          center_lat: data.leaflet_bounds
+            ? (data.leaflet_bounds[0][0] + data.leaflet_bounds[1][0]) / 2
+            : null,
+          center_lon: data.leaflet_bounds
+            ? (data.leaflet_bounds[0][1] + data.leaflet_bounds[1][1]) / 2
+            : null,
+          date_a: data.before_date,
+          date_b: data.after_date,
+          date_a_display: data.before_date,
+          date_b_display: data.after_date,
+        };
+        setSummaryFromChangeStats(data);
+        changeOverlayA = setBoundedOverlay(mapA, changeOverlayA, data.before_url, data.leaflet_bounds, 0.9);
+        changeOverlayB = setBoundedOverlay(mapB, changeOverlayB, data.after_url, data.leaflet_bounds, 0.9);
+        if (dwLayerA && mapA.hasLayer(dwLayerA)) {
+          mapA.removeLayer(dwLayerA);
+          dwLayerA = null;
+        }
+        if (dwLayerB && mapB.hasLayer(dwLayerB)) {
+          mapB.removeLayer(dwLayerB);
+          dwLayerB = null;
+        }
+        if (data.change_url && data.leaflet_bounds) {
+          if (mapC && dwLayerChangeC) {
+            mapC.removeLayer(dwLayerChangeC);
+            dwLayerChangeC = null;
+          }
+          setChangeMaskOverlay(data.change_url, data.leaflet_bounds);
+        }
+      } catch (err) {
+        lastChangeStats = null;
+        clearSummaryFromChangeStats();
+        const footerErr = document.getElementById("change-analysis-footer");
+        if (footerErr && !footerErr.hidden) setSummaryPanelMinimized(false);
+        const summaryEl = document.getElementById("summary");
+        if (summaryEl) {
+          summaryEl.textContent = "Error: " + err.message;
+        }
+      } finally {
+        if (showLoader) endLoading();
+      }
+    }
+
+    function renderReport(data) {
+      const el = document.getElementById("reportContent");
+      if (data.detail && !data.metrics) {
+        el.innerHTML = '<div class="card err-box">' + escapeHtml(String(data.detail)) + "</div>";
+        return;
+      }
+      const m = data.metrics || {};
+      const n = data.narrative || {};
+      const dr = m.date_range || {};
+      const risk = (m.risk_level || "LOW").toUpperCase();
+      const meta = data.report_metadata || {};
+      const cards = data.dynamic_metric_cards || [];
+      const trans = data.top_transitions || [];
+      const recs = Array.isArray(n.recommendations) ? n.recommendations : [];
+      const rc = riskBadgeClass(risk);
+
+      var html = '<div class="rpt-header">';
+      html += '<div class="rpt-meta">';
+      if (meta.generated_at) {
+        var ts = meta.generated_at.replace("T"," ").slice(0,19) + " UTC";
+        html += escapeHtml(ts);
+      }
+      if (meta.data_source) html += " &nbsp;&middot;&nbsp; " + escapeHtml(meta.data_source);
+      if (meta.satellite) html += " &nbsp;&middot;&nbsp; " + escapeHtml(meta.satellite);
+      if (meta.pixel_scale) html += " &nbsp;&middot;&nbsp; " + escapeHtml(meta.pixel_scale) + " resolution";
+      html += "</div>";
+      var disasterName = "";
+      if (selectedChangePresetId) {
+        var activePreset = CHANGE_PRESET_OPTIONS.find(function(p) { return p.id === selectedChangePresetId; });
+        if (activePreset && activePreset.line) disasterName = activePreset.line;
+      }
+      html += '<div class="rpt-title">Change Detection Report' +
+        (disasterName ? " &nbsp;&middot;&nbsp; " + escapeHtml(disasterName) : "") + "</div>";
+      html += '<div class="rpt-sub">' + escapeHtml(m.region || "Study area") +
+        " &nbsp;&middot;&nbsp; " + escapeHtml(dr.start || "") + " → " + escapeHtml(dr.end || "") + "</div>";
+      html += '<span class="badge ' + rc + '">' + riskIcon(risk) + " " + risk + " RISK</span>";
+      html += "</div>";
+
+      if (cards.length) {
+        html += '<div class="rpt-metrics-grid">';
+        cards.forEach(function(c) {
+          html += '<div class="rpt-metric-card">';
+          html += '<div class="rpt-metric-label">' + escapeHtml(c.label) + "</div>";
+          html += '<div class="rpt-metric-value">' + escapeHtml(c.value) + "</div>";
+          html += '<div class="rpt-metric-detail">' + escapeHtml(c.detail) + "</div>";
+          html += "</div>";
+        });
+        html += "</div>";
+      }
+
+      html += '<div class="rpt-section">';
+      html += '<div class="rpt-section-label">What Changed</div>';
+      if (n.what_changed) {
+        var wcText = n.what_changed;
+        var wcParts = wcText.split(/(?<=\.)\s+(?=[A-Z])/);
+        if (wcParts.length > 1) {
+          var introParts = [];
+          var transParts = [];
+          wcParts.forEach(function(s) {
+            if (s.indexOf("→") !== -1 || s.indexOf("->") !== -1) {
+              transParts.push(s.trim());
+            } else {
+              introParts.push(s.trim());
+            }
+          });
+          if (introParts.length) {
+            html += '<div class="rpt-section-body" style="margin-bottom:10px;">' + escapeHtml(introParts.join(" ")) + "</div>";
+          }
+          transParts.forEach(function(line) {
+            html += '<div class="rpt-section-body" style="padding:5px 0;border-bottom:1px solid rgba(30,58,95,0.4);">' + escapeHtml(line) + "</div>";
+          });
+        } else {
+          html += '<div class="rpt-section-body">' + escapeHtml(wcText) + "</div>";
+        }
+      }
+      html += "</div>";
+
+      if (n.environmental_impact) {
+        html += '<div class="rpt-section">';
+        html += '<div class="rpt-section-label">Environmental Impact</div>';
+        html += '<div class="rpt-section-body">' + escapeHtml(n.environmental_impact) + "</div>";
+        html += "</div>";
+      }
+
+      html += '<div class="rpt-section">';
+      html += '<div class="rpt-section-label">Risk Level Assessment</div>';
+      html += '<div style="margin-bottom:10px;"><span class="badge ' + rc + '">' + riskIcon(risk) + " " + risk + "</span></div>";
+      if (n.risk_meaning) {
+        html += '<div class="rpt-section-body">' + escapeHtml(n.risk_meaning) + "</div>";
+      }
+      html += "</div>";
+
+      if (recs.length) {
+        html += '<div class="rpt-section">';
+        html += '<div class="rpt-section-label">Recommendations</div>';
+        recs.forEach(function(r, i) {
+          html += '<div class="rpt-rec-item"><span class="rpt-rec-num">' + (i+1) + ".</span><span>" + escapeHtml(r) + "</span></div>";
+        });
+        html += "</div>";
+      }
+
+      html += '<div class="rpt-source-bar">';
+      html += "Data source: GOOGLE/DYNAMICWORLD/V1 &nbsp;&middot;&nbsp; ";
+      html += "Pixel scale: " + escapeHtml(meta.pixel_scale || "100 m") + " &nbsp;&middot;&nbsp; ";
+      html += (meta.ai_generated ? "AI-enhanced narrative (GPT-4o-mini)" : "Rule-based narrative");
+      html += "</div>";
+
+      html += '<div class="rpt-download-bar">';
+      html += '<button type="button" class="rpt-download-btn" onclick="downloadReportPdf()">&#x2913; Download Report</button>';
+      html += "</div>";
+
+      el.innerHTML = html;
+    }
+
+    async function downloadReportPdf() {
+      var inner = document.getElementById("reportInner");
+      if (!inner) return;
+      var btn = inner.querySelector(".rpt-download-btn");
+      if (btn) btn.style.display = "none";
+      var closeBtn = inner.querySelector(".btn-close");
+      if (closeBtn) closeBtn.style.display = "none";
+      var origMaxH = inner.style.maxHeight;
+      var origOverflow = inner.style.overflow;
+      inner.style.maxHeight = "none";
+      inner.style.overflow = "visible";
+      try {
+        var canvas = await html2canvas(inner, {
+          backgroundColor: "#0c1428",
+          scale: 2,
+          useCORS: true,
+          logging: false,
+        });
+        var link = document.createElement("a");
+        link.download = "TerraScope_Report.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } catch (e) {
+        console.error("PDF download failed:", e);
+        alert("Download failed. Try right-clicking the report and selecting 'Save as Image'.");
+      } finally {
+        inner.style.maxHeight = origMaxH;
+        inner.style.overflow = origOverflow;
+        if (btn) btn.style.display = "";
+        if (closeBtn) closeBtn.style.display = "";
+      }
+    }
+    window.downloadReportPdf = downloadReportPdf;
+
+    function applyChangeModeLayerControls() {
+      if (layerControlA) mapA.removeControl(layerControlA);
+      const baseA = { "Original Satellite": satelliteA };
+      const overlaysA = {};
+      if (dwLayerA) overlaysA["Dynamic World"] = dwLayerA;
+      if (changeOverlayA) overlaysA["Dynamic World"] = changeOverlayA;
+      if (dwLayerB && mapA.hasLayer(dwLayerB)) overlaysA["Dynamic World (B)"] = dwLayerB;
+      if (dwLayerChangeA) overlaysA["Change Detection"] = dwLayerChangeA;
+      layerControlA = L.control.layers(baseA, overlaysA, { position: "topleft" }).addTo(mapA);
+
+      if (layerControlB) mapB.removeControl(layerControlB);
+      const baseB = { "Original Satellite": satelliteB };
+      const overlaysB = {};
+      if (dwLayerB) overlaysB["Dynamic World"] = dwLayerB;
+      if (changeOverlayB) overlaysB["Dynamic World"] = changeOverlayB;
+      layerControlB = L.control.layers(baseB, overlaysB, { position: "topleft" }).addTo(mapB);
+
+      if (layerControlC && mapC) mapC.removeControl(layerControlC);
+      layerControlC = null;
+      if (mapC && satelliteC) {
+        const baseC = { "Original Satellite": satelliteC };
+        const overlaysC = {};
+        if (dwLayerChangeC) overlaysC["Change"] = dwLayerChangeC;
+        if (changeMaskOverlayC) overlaysC["Change mask"] = changeMaskOverlayC;
+        layerControlC = L.control.layers(baseC, overlaysC, { position: "topleft" }).addTo(mapC);
+      }
+    }
+
+    function syncChangeModeViewportFromStats() {
+      if (!lastChangeStats || !lastChangeStats.leaflet_bounds || lastChangeStats.leaflet_bounds.length < 2) {
+        return;
+      }
+      const b = [
+        [lastChangeStats.leaflet_bounds[0][0], lastChangeStats.leaflet_bounds[0][1]],
+        [lastChangeStats.leaflet_bounds[1][0], lastChangeStats.leaflet_bounds[1][1]],
+      ];
+      const fitOpts = { padding: [18, 18], maxZoom: 13 };
+      mapA.fitBounds(b, fitOpts);
+      mapB.fitBounds(b, fitOpts);
+      if (mapC) mapC.fitBounds(b, fitOpts);
+    }
+
+    async function loadChangeDetectionMode(state, showLoader = true) {
+      if (showLoader) beginLoading();
+      try {
+        if (dwLayerA) {
+          mapA.removeLayer(dwLayerA);
+          dwLayerA = null;
+        }
+        if (dwLayerChangeA) {
+          mapA.removeLayer(dwLayerChangeA);
+          dwLayerChangeA = null;
+        }
+        if (dwLayerB) {
+          if (mapA.hasLayer(dwLayerB)) mapA.removeLayer(dwLayerB);
+          if (mapB.hasLayer(dwLayerB)) mapB.removeLayer(dwLayerB);
+          dwLayerB = null;
+        }
+        if (mapC && dwLayerChangeC) {
+          mapC.removeLayer(dwLayerChangeC);
+          dwLayerChangeC = null;
+        }
+        if (changeOverlayA) {
+          mapA.removeLayer(changeOverlayA);
+          changeOverlayA = null;
+        }
+        if (changeOverlayB) {
+          mapB.removeLayer(changeOverlayB);
+          changeOverlayB = null;
+        }
+        if (mapC && changeMaskOverlayC) {
+          mapC.removeLayer(changeMaskOverlayC);
+          changeMaskOverlayC = null;
+        }
+
+        const mapGridRoot = document.getElementById("map-grid-root");
+        const panelA = document.getElementById("map-panel-a");
+        const panelB = document.getElementById("map-panel-b");
+        const panelC = document.getElementById("map-panel-c");
+        const labelA = document.getElementById("map-panel-a-label");
+        const labelB = document.getElementById("map-panel-b-label");
+        const labelC = document.getElementById("map-panel-c-label");
+        const chipWrap = document.getElementById("region-chip-wrap");
+        const cityVal = (state.city || "").trim();
+
+        mapGridRoot.classList.remove("single-map-mode");
+        mapGridRoot.classList.add("has-change-row");
+        panelB.hidden = false;
+        panelC.hidden = false;
+        panelA.style.display = "flex";
+        panelB.style.display = "flex";
+
+        if (cityVal) {
+          chipWrap.hidden = false;
+          document.getElementById("region-chip-label").textContent = cityVal;
+        } else {
+          chipWrap.hidden = true;
+        }
+
+        labelA.textContent = "Before · " + state.date_a;
+        labelB.textContent = "After · " + state.date_b;
+        labelC.textContent = "Change mask · " + state.date_a + " → " + state.date_b;
+
+        ensureMapC();
+        mapA.invalidateSize({ pan: false });
+        mapB.invalidateSize({ pan: false });
+        if (mapC) mapC.invalidateSize({ pan: false });
+
+        await loadChangeDetectionStats(state, showLoader);
+        syncChangeModeViewportFromStats();
+
+        applyChangeModeLayerControls();
+        syncChangeModeLegends(true);
+
+        if (mapA.hasLayer(floodSpotsLayerA)) {
+          mapA.removeLayer(floodSpotsLayerA);
+        }
+
+        setTimeout(() => {
+          mapA.invalidateSize({ pan: false });
+          mapB.invalidateSize({ pan: false });
+          if (mapC) mapC.invalidateSize({ pan: false });
+          syncChangeModeViewportFromStats();
+        }, 200);
+      } catch (err) {
+        console.error("loadChangeDetectionMode", err);
+      } finally {
+        if (showLoader) endLoading();
+      }
+    }
+
+    function applyModeLayout(mode) {
+      const mapGridRoot = document.getElementById("map-grid-root");
+      const panelA = document.getElementById("map-panel-a");
+      const panelB = document.getElementById("map-panel-b");
+      const panelC = document.getElementById("map-panel-c");
+      const changeFooter = document.getElementById("change-analysis-footer");
+      const mapAEl = document.getElementById("mapA");
+      const predictionView = document.getElementById("prediction-view");
+
+      hideVideoPreview();
+
+      if (mapAEl) mapAEl.style.display = "block";
+      if (predictionView) predictionView.hidden = true;
+
+      if (mode === "home" || mode === "timeseries") {
+        mapGridRoot.classList.add("single-map-mode");
+        mapGridRoot.classList.remove("has-change-row");
+        panelB.hidden = true;
+        panelC.hidden = true;
+        if (changeFooter) changeFooter.hidden = true;
+        panelA.style.display = "flex";
+        panelB.style.display = "none";
+        if (mode === "home") {
+          if (!mapA.hasLayer(floodSpotsLayerA)) floodSpotsLayerA.addTo(mapA);
+        } else {
+          if (mapA.hasLayer(floodSpotsLayerA)) mapA.removeLayer(floodSpotsLayerA);
+        }
+        lastChangeStats = null;
+        clearSummaryFromChangeStats();
+        syncChangeModeLegends(false);
+      }
+
+      const mapLegendGlobal = document.getElementById("map-legend");
+      if (mapLegendGlobal) {
+        mapLegendGlobal.style.display = mode === "timeseries" ? "none" : "flex";
+      }
+
+      const dlBtnA = document.getElementById("btn-download-map-a");
+      if (dlBtnA) {
+        if (mode === "timeseries") {
+          const link = document.getElementById("video-download-link");
+          const hasVideo = link && link.href && link.style.display !== "none";
+          dlBtnA.textContent = hasVideo ? "Download Video" : "Generate Video";
+        } else if (mode === "prediction") {
+          dlBtnA.textContent = "Download Images";
+        } else {
+          dlBtnA.textContent = "Download";
+        }
+      }
+
+      setTimeout(() => {
+        mapA.invalidateSize();
+        mapB.invalidateSize();
+        if (mapC) mapC.invalidateSize();
+      }, 150);
+    }
+
+    async function loadMapFromBackend(showLoader = true) {
+      const gen = ++_mapLoadGen;
+      if (showLoader) beginLoading();
+      const state = getUIState();
+
+      applyModeLayout(state.mode);
+
+      if (state.mode === "prediction") {
+        renderPredictionModeOnlyView();
+        if (showLoader) endLoading();
+        return;
+      }
+      if (state.mode === "change_detection") {
+        await loadChangeDetectionMode(state, showLoader);
+        if (showLoader) endLoading();
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/map-config`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(state),
+        });
+
+        if (gen !== _mapLoadGen) {
+          if (showLoader) endLoading();
+          return;
+        }
+
+        if (!res.ok) {
+          console.error("Map config error", await res.text());
+          return;
+        }
+
+        const data = await res.json();
+
+        const center = [data.center_lat, data.center_lon];
+        const zoom = data.map_zoom != null ? data.map_zoom : 11;
+        mapA.setView(center, zoom);
+        mapB.setView(center, zoom);
+        if (mapC) mapC.setView(center, zoom);
+
+        if (dwLayerA) { mapA.removeLayer(dwLayerA); dwLayerA = null; }
+        if (dwLayerChangeA) { mapA.removeLayer(dwLayerChangeA); dwLayerChangeA = null; }
+        if (dwLayerB) {
+          if (mapA.hasLayer(dwLayerB)) mapA.removeLayer(dwLayerB);
+          if (mapB.hasLayer(dwLayerB)) mapB.removeLayer(dwLayerB);
+          dwLayerB = null;
+        }
+        if (mapC && dwLayerChangeC) {
+          mapC.removeLayer(dwLayerChangeC);
+          dwLayerChangeC = null;
+        }
+        if (changeOverlayA) {
+          mapA.removeLayer(changeOverlayA);
+          changeOverlayA = null;
+        }
+        if (changeOverlayB) {
+          mapB.removeLayer(changeOverlayB);
+          changeOverlayB = null;
+        }
+        if (mapC && changeMaskOverlayC) {
+          mapC.removeLayer(changeMaskOverlayC);
+          changeMaskOverlayC = null;
+        }
+
+        const tiles = data.tiles || {};
+        const mode = state.mode;
+        lastMapData = data;
+
+        const labelA = document.getElementById("map-panel-a-label");
+
+        const chipWrap = document.getElementById("region-chip-wrap");
+        const cityVal = (state.city || "").trim();
+        if (cityVal) {
+          chipWrap.hidden = false;
+          document.getElementById("region-chip-label").textContent = cityVal;
+        } else {
+          chipWrap.hidden = true;
+        }
+
+        if (mode === "home") {
+          labelA.textContent =
+            data.city === "World"
+              ? `World · ${data.date_a_display} (DW ${data.dw_year_a ?? ""})`
+              : `${data.city} · ${data.date_a_display} (DW ${data.dw_year_a ?? ""})`;
+          if (tiles.a) {
+            dwLayerA = L.tileLayer(tiles.a, {
+              opacity: 0.92,
+              maxNativeZoom: data.city === "World" ? 14 : 19,
+              maxZoom: 19,
+              crossOrigin: true,
+            });
+          }
+        } else if (mode === "timeseries") {
+          labelA.textContent =
+            `Time series · Y${data.dw_year_a ?? ""} → Y${data.dw_year_b ?? ""}`;
+        }
+
+        if (layerControlA) mapA.removeControl(layerControlA);
+        const baseA = { "Original Satellite": satelliteA };
+        const overlaysA = {};
+        if (dwLayerA) overlaysA["Dynamic World"] = dwLayerA;
+        if (changeOverlayA) overlaysA["Dynamic World"] = changeOverlayA;
+        if (dwLayerB && mapA.hasLayer(dwLayerB)) overlaysA["Dynamic World (B)"] = dwLayerB;
+        if (dwLayerChangeA) overlaysA["Change Detection"] = dwLayerChangeA;
+        if (mode === "home") overlaysA["Change case spots"] = floodSpotsLayerA;
+        layerControlA = L.control.layers(baseA, overlaysA, { position: "topleft" }).addTo(mapA);
+
+        if (mode !== "home" && mapA.hasLayer(floodSpotsLayerA)) {
+          mapA.removeLayer(floodSpotsLayerA);
+        }
+        if (layerControlB) {
+          mapB.removeControl(layerControlB);
+          layerControlB = null;
+        }
+        if (layerControlC && mapC) {
+          mapC.removeControl(layerControlC);
+          layerControlC = null;
+        }
+
+        setTimeout(() => {
+          mapA.invalidateSize();
+          mapB.invalidateSize();
+          if (mapC) mapC.invalidateSize();
+        }, 200);
+      } catch (err) {
+        console.error("Error calling /map-config", err);
+      } finally {
+        if (showLoader) endLoading();
+      }
+    }
+
+    function getVideoCadence() {
+      const r = document.querySelector('input[name="video-cadence"]:checked');
+      return r && r.value === "weekly" ? "weekly" : "monthly";
+    }
+
+    function parseContentDispositionFilename(headerVal) {
+      if (!headerVal || typeof headerVal !== "string") return null;
+      const mStar = /filename\*=UTF-8''([^;\n]+)/i.exec(headerVal);
+      if (mStar) {
+        try {
+          return decodeURIComponent(mStar[1].trim().replace(/^"|"$/g, ""));
+        } catch (_e) {
+          return mStar[1].trim();
+        }
+      }
+      const mQ = /filename="((?:\\.|[^"\\])*)"/i.exec(headerVal);
+      if (mQ) return mQ[1].replace(/\\"/g, '"');
+      const mBare = /filename=([^;\r\n]+)/i.exec(headerVal);
+      if (mBare) return mBare[1].trim().replace(/^["']|["']$/g, "");
+      return null;
+    }
+
+    function safeVideoFilename(name) {
+      return String(name).replace(/[\\/:*?"<>|]/g, "_").trim().slice(0, 200) || "timeseries.mp4";
+    }
+
+    async function generateTimeSeriesVideo() {
+      beginLoading();
+      const link = document.getElementById("video-download-link");
+      const state = getUIState();
+      const cadence = getVideoCadence();
+
+      link.style.display = "none";
+      link.removeAttribute("href");
+
+      try {
+        const res = await fetch(`${API_BASE}/timeseries-video`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            year_a: parseInt(String(state.date_a).slice(0, 4), 10) || 2020,
+            year_b: parseInt(String(state.date_b).slice(0, 4), 10) || 2024,
+            city: state.city,
+            fps: 0.75,
+            size: 1024,
+            radius_m: 12000,
+            cadence: cadence,
+            date_a: state.date_a || null,
+            date_b: state.date_b || null,
+          }),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error(errText);
+          return;
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const fallbackName = `timeseries_${cadence}_${(state.city || "region").replace(/\s+/g, "_")}_${String(state.date_a).slice(0, 10)}_${String(state.date_b).slice(0, 10)}.mp4`;
+        const fd = parseContentDispositionFilename(res.headers.get("Content-Disposition"));
+        const downloadName = safeVideoFilename(fd || fallbackName);
+
+        link.href = url;
+        link.setAttribute("download", downloadName);
+        link.style.display = "inline-block";
+
+        showVideoPreview(
+          url,
+          `Time series (${cadence}) · ${String(state.date_a).slice(0, 10)} → ${String(state.date_b).slice(0, 10)}`
+        );
+        const dlBtnA = document.getElementById("btn-download-map-a");
+        if (dlBtnA && currentMode() === "timeseries") dlBtnA.textContent = "Download Video";
+      } catch (err) {
+        console.error(err);
+      } finally {
+        endLoading();
+      }
+    }
+
+    document.getElementById("dateA").addEventListener("change", loadMapFromBackend);
+    document.getElementById("dateB").addEventListener("change", loadMapFromBackend);
+    document.getElementById("windowDays").addEventListener("change", loadMapFromBackend);
+    document.getElementById("city").addEventListener("blur", loadMapFromBackend);
+    document.getElementById("city").addEventListener("blur", () => {
+      setTimeout(() => {
+        hideCitySuggestions();
+      }, 220);
+    });
+    document.getElementById("city").addEventListener("input", scheduleCitySuggestions);
+    document.getElementById("city").addEventListener("keydown", (e) => {
+      const box = document.getElementById("city-suggestions");
+      if (!box || box.hidden) {
+        if (e.key === "Escape") hideCitySuggestions();
+        return;
+      }
+      const n = citySuggestItems.length;
+      if (!n) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        hideCitySuggestions();
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const next = citySuggestHighlight < 0 ? 0 : Math.min(citySuggestHighlight + 1, n - 1);
+        setCitySuggestionHighlight(next);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const prev = citySuggestHighlight <= 0 ? -1 : citySuggestHighlight - 1;
+        setCitySuggestionHighlight(prev);
+        return;
+      }
+      if (e.key === "Enter" && citySuggestHighlight >= 0 && citySuggestItems[citySuggestHighlight]) {
+        e.preventDefault();
+        applyCitySuggestion(citySuggestItems[citySuggestHighlight].label);
+      }
+    });
+
+    function onManualPresetFieldChange() {
+      clearChangePresetSelection();
+    }
+    ["input", "change"].forEach((ev) => {
+      document.getElementById("dateA").addEventListener(ev, onManualPresetFieldChange);
+      document.getElementById("dateB").addEventListener(ev, onManualPresetFieldChange);
+      document.getElementById("windowDays").addEventListener(ev, onManualPresetFieldChange);
+      document.getElementById("city").addEventListener(ev, onManualPresetFieldChange);
+    });
+
+    document.querySelectorAll('input[name="mode"]').forEach(r =>
+      r.addEventListener("change", () => {
+        updateDateUIForMode();
+        updateVideoToolsVisibility();
+        loadMapFromBackend();
+      })
+    );
+
+    document.getElementById("generate-video-btn").addEventListener("click", generateTimeSeriesVideo);
+    document.getElementById("video-preview-close").addEventListener("click", hideVideoPreview);
+    document.getElementById("btnClose").addEventListener("click", () => {
+      document.getElementById("reportBox").classList.remove("show");
+    });
+    document.getElementById("btnSummaryMinimize").addEventListener("click", () => {
+      const footer = document.getElementById("change-analysis-footer");
+      if (!footer) return;
+      setSummaryPanelMinimized(!footer.classList.contains("is-minimized"));
+    });
+
+    document.getElementById("btnSummaryAnalysisToggle").addEventListener("click", () => {
+      const footer = document.getElementById("change-analysis-footer");
+      if (!footer) return;
+      setChangeSummaryFooterVisible(footer.hidden);
+    });
+
+    document.getElementById("btnReport").addEventListener("click", async () => {
+      beginLoading();
+      try {
+      const lastResult = lastChangeStats;
+      if (!lastResult) {
+        alert("Run Generate first.");
+        return;
+      }
+      const box = document.getElementById("reportBox");
+      const el = document.getElementById("reportContent");
+      el.innerHTML = '<div class="card"><p>Generating…</p></div>';
+      box.classList.add("show");
+      try {
+        const res = await fetch(`${API_BASE}/api/report`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            region: document.getElementById("city").value.trim() || lastResult.region_label,
+            date_range: {
+              start: document.getElementById("dateA").value,
+              end: document.getElementById("dateB").value,
+            },
+            change_stats: lastResult,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        renderReport(data);
+      } catch (err) {
+        el.innerHTML = '<div class="card err-box">Error: ' + escapeHtml(err.message) + "</div>";
+      }
+      } finally {
+        endLoading();
+      }
+    });
+
+    document.getElementById("region-chip-clear").addEventListener("click", () => {
+      document.getElementById("city").value = "";
+      document.getElementById("region-chip-wrap").hidden = true;
+      clearChangePresetSelection();
+      loadMapFromBackend();
+    });
+
+    document.getElementById("prediction-region").addEventListener("change", () => {
+      updatePredictionDateOptions();
+    });
+    document.getElementById("show-prediction-btn").addEventListener("click", loadPredictionImageFromSelection);
+
+    async function downloadMapSnapshot(map, panelTitle) {
+      if (typeof html2canvas === "undefined") {
+        alert("Download library did not load. Check your network.");
+        return;
+      }
+      const el = map.getContainer();
+      const dm =
+        lastMapData && (currentMode() === "home" || lastMapData.date_a === lastMapData.date_b)
+          ? lastMapData.date_a_display
+          : lastMapData
+            ? lastMapData.date_a_display + " → " + lastMapData.date_b_display
+            : "";
+      const lines = [
+        panelTitle || "TerraScope",
+        lastMapData ? "Region: " + lastMapData.city : "",
+        dm ? "Dates: " + dm : "",
+      ].filter(Boolean);
+      try {
+        const canvas = await html2canvas(el, {
+          useCORS: true,
+          allowTaint: false,
+          logging: false,
+          scale: Math.min(2, (window.devicePixelRatio || 1) * 1.25),
+        });
+        const capH = Math.max(52, 16 + lines.length * 20);
+        const out = document.createElement("canvas");
+        out.width = canvas.width;
+        out.height = canvas.height + capH;
+        const octx = out.getContext("2d");
+        octx.fillStyle = "#0f172a";
+        octx.fillRect(0, 0, out.width, out.height);
+        octx.drawImage(canvas, 0, 0);
+        octx.fillStyle = "#e2e8f0";
+        octx.font = "600 14px system-ui,Segoe UI,sans-serif";
+        let y = canvas.height + 16;
+        lines.forEach((line) => {
+          octx.fillText(String(line).substring(0, 100), 12, y);
+          y += 20;
+        });
+        out.toBlob((blob) => {
+          if (!blob) return;
+          const a = document.createElement("a");
+          const safe = (panelTitle || "map").replace(/[^\w\-]+/g, "_").slice(0, 48);
+          a.href = URL.createObjectURL(blob);
+          a.download = "terrascope_" + safe + ".png";
+          a.click();
+          URL.revokeObjectURL(a.href);
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Could not capture this map. Some layers block export—try hiding the satellite base layer.");
+      }
+    }
+
+    document.getElementById("btn-download-map-a").addEventListener("click", () => {
+      if (currentMode() === "timeseries") {
+        const link = document.getElementById("video-download-link");
+        if (link && link.href && link.style.display !== "none") {
+          link.click();
+          return;
+        }
+        generateTimeSeriesVideo();
+        return;
+      }
+      if (currentMode() === "prediction") {
+        downloadPredictionImages();
+        return;
+      }
+      downloadMapSnapshot(mapA, document.getElementById("map-panel-a-label").textContent);
+    });
+    document.getElementById("btn-download-map-b").addEventListener("click", () => {
+      downloadMapSnapshot(mapB, document.getElementById("map-panel-b-label").textContent);
+    });
+    document.getElementById("btn-download-map-c").addEventListener("click", () => {
+      if (!mapC) return;
+      downloadMapSnapshot(mapC, document.getElementById("map-panel-c-label").textContent);
+    });
+
+    buildChangePresetGrid();
+    populatePredictionRegionOptions();
+    updatePredictionDateOptions();
+    initDateInputs();
+    updateDateUIForMode();
+    updateVideoToolsVisibility();
+    syncChangeModeLegends(currentMode() === "change_detection");
+
+    (function initWelcomeOverlay() {
+      const overlay = document.getElementById("welcome-overlay");
+      const KEY = "terrascope_welcome_seen_v9";
+      const AUTO_MS = 3600;
+      let autoTimer = null;
+      let mapStarted = false;
+      function startMapIfNeeded() {
+        if (mapStarted) return;
+        mapStarted = true;
+        loadMapFromBackend();
+      }
+      function dismiss() {
+        if (overlay.classList.contains("welcome-overlay--leaving")) return;
+        if (autoTimer) {
+          clearTimeout(autoTimer);
+          autoTimer = null;
+        }
+        startMapIfNeeded();
+        overlay.classList.add("welcome-overlay--leaving");
+        try {
+          localStorage.setItem(KEY, "1");
+        } catch (e) {}
+        document.documentElement.classList.add("welcome-already-seen");
+        let finished = false;
+        function finish() {
+          if (finished) return;
+          finished = true;
+          clearTimeout(fallback);
+          overlay.removeEventListener("transitionend", onTransitionEnd);
+          overlay.setAttribute("hidden", "");
+          overlay.setAttribute("aria-hidden", "true");
+        }
+        function onTransitionEnd(ev) {
+          if (ev.target !== overlay || ev.propertyName !== "opacity") return;
+          finish();
+        }
+        const fallback = setTimeout(finish, 800);
+        overlay.addEventListener("transitionend", onTransitionEnd);
+      }
+      if (!overlay) {
+        startMapIfNeeded();
+        return;
+      }
+      if (document.documentElement.classList.contains("welcome-already-seen")) {
+        overlay.setAttribute("hidden", "");
+        overlay.setAttribute("aria-hidden", "true");
+        startMapIfNeeded();
+        return;
+      }
+      overlay.removeAttribute("hidden");
+      overlay.removeAttribute("aria-hidden");
+      autoTimer = setTimeout(dismiss, AUTO_MS);
+    })();
+
+    window.addEventListener("resize", () => {
+      setTimeout(() => {
+        mapA.invalidateSize();
+        mapB.invalidateSize();
+        if (mapC) mapC.invalidateSize();
+      }, 120);
+    });
+
+    function setAssistantDockOpen(open) {
+      const root = document.querySelector(".app-root");
+      if (!root) return;
+      root.classList.toggle("chat-dock-open", !!open);
+      setTimeout(() => {
+        mapA.invalidateSize();
+        mapB.invalidateSize();
+        if (mapC) mapC.invalidateSize();
+      }, 160);
+      if (open) {
+        const input = document.getElementById("chat-input");
+        if (input) input.focus();
+      }
+    }
+
+    const helpOpenBtn = document.getElementById("help-open-btn");
+    if (helpOpenBtn) {
+      helpOpenBtn.addEventListener("click", () => setAssistantDockOpen(true));
+    }
+    const helpCloseBtn = document.getElementById("help-close-btn");
+    if (helpCloseBtn) {
+      helpCloseBtn.addEventListener("click", () => setAssistantDockOpen(false));
+    }
+
+    const _chatHistory = [];
+
+    function appendMessage(role, text) {
+      const container = document.getElementById("chat-messages");
+      const msg = document.createElement("div");
+      msg.className = "message " + role;
+      const bubble = document.createElement("div");
+      bubble.className = "bubble " + role;
+      bubble.textContent = text;
+      msg.appendChild(bubble);
+      container.appendChild(msg);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function handleChatSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById("chat-input");
+      const text = input.value.trim();
+      if (!text) {
+        return;
+      }
+      input.value = "";
+      beginChatLoading();
+      try {
+        appendMessage("user", text);
+
+        applyChatTextToControls(text);
+        updateDateUIForMode();
+        updateVideoToolsVisibility();
+        await loadMapFromBackend(false);
+
+        const state = getUIState();
+
+        const res = await fetch(`${API_BASE}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: text,
+            mode: state.mode,
+            date_a: state.date_a,
+            date_b: state.date_b,
+            city: state.city,
+            history: _chatHistory.slice(-10),
+          }),
+        });
+
+        _chatHistory.push({ role: "user", content: text });
+
+        if (!res.ok) {
+          console.error("Chat error", await res.text());
+          appendMessage("bot", "Sorry, something went wrong talking to the backend.");
+          return;
+        }
+
+        const data = await res.json();
+        const reply = data.reply || "(empty reply)";
+        appendMessage("bot", reply);
+        _chatHistory.push({ role: "assistant", content: reply });
+
+        if (data.summary && currentMode() !== "change_detection") {
+          const sumEl = document.getElementById("summary");
+          if (sumEl) sumEl.textContent = data.summary;
+        }
+      } catch (err) {
+        console.error("Error calling /chat", err);
+        appendMessage("bot", "Sorry, I couldn't reach the server.");
+      } finally {
+        endChatLoading();
+      }
+    }
+  </script>
+</body>
+</html>
