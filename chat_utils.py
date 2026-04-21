@@ -2,7 +2,7 @@ import os
 from openai import OpenAI
 
 # reads OPENAI_API_KEY from environment
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "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"))
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
 def ask_chatbot(messages: list[dict]) -> str:
