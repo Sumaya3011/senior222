@@ -4100,6 +4100,16 @@
       if (!wrap || !player) return;
       wrap.hidden = true;
       player.pause();
+      try {
+        player.removeAttribute("src");
+        player.load();
+      } catch (_e) {}
+      if (lastVideoUrl) {
+        try {
+          URL.revokeObjectURL(lastVideoUrl);
+        } catch (_e) {}
+        lastVideoUrl = null;
+      }
     }
 
     function modeToLabel(v) {
@@ -5106,6 +5116,7 @@
 
     document.querySelectorAll('input[name="mode"]').forEach(r =>
       r.addEventListener("change", () => {
+        hideVideoPreview();
         updateDateUIForMode();
         updateVideoToolsVisibility();
         loadMapFromBackend();
