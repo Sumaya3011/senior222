@@ -348,17 +348,35 @@
       justify-content: flex-end;
     }
 
+    .help-btn,
+    .theme-btn,
+    .assistant-dock-close,
+    .map-download-btn,
+    .video-preview-close,
+    .summary-show-btn,
+    .summary-minimize-btn,
+    #change-analysis-footer button.secondary,
+    #region-chip-clear {
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      letter-spacing: 0.02em;
+    }
+
     .help-btn {
       border-radius: 999px;
       border: 1px solid rgba(96, 165, 250, 0.55);
       background: rgba(37, 99, 235, 0.22);
       color: #dbeafe;
       font-size: 11px;
-      font-weight: 600;
-      padding: 7px 12px;
+      font-weight: 700;
+      min-height: 32px;
+      padding: 6px 12px;
       cursor: pointer;
       transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
     .help-btn:hover {
@@ -367,23 +385,50 @@
       color: #f8fafc;
     }
 
+    .help-btn::before {
+      content: "?";
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      border: 1px solid currentColor;
+      font-size: 10px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.92;
+      font-weight: 700;
+    }
+
     .theme-btn {
       border-radius: 999px;
       border: 1px solid rgba(148, 163, 184, 0.55);
       background: rgba(15, 23, 42, 0.62);
       color: var(--text-main);
       font-size: 11px;
-      font-weight: 600;
-      padding: 7px 12px;
+      font-weight: 700;
+      min-height: 32px;
+      padding: 6px 12px;
       cursor: pointer;
       transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
     .theme-btn:hover {
       background: rgba(59, 130, 246, 0.18);
       border-color: rgba(96, 165, 250, 0.52);
       color: var(--text-main);
+    }
+
+    .theme-btn::before {
+      content: "◐";
+      font-size: 12px;
+      line-height: 1;
+      opacity: 0.95;
     }
 
     html[data-theme="light"] .theme-btn {
@@ -396,6 +441,10 @@
       background: rgba(37, 99, 235, 0.78);
       border-color: rgba(37, 99, 235, 0.66);
       color: #f8fafc;
+    }
+
+    html[data-theme="light"] .theme-btn::before {
+      content: "◑";
     }
 
     html[data-theme="light"] .top-brand-title {
@@ -494,6 +543,28 @@
       border-color: rgba(100, 116, 139, 0.52);
     }
 
+    html[data-theme="light"] .map-download-btn {
+      background: rgba(37, 99, 235, 0.18);
+      border-color: rgba(37, 99, 235, 0.45);
+      color: #1e40af;
+    }
+
+    html[data-theme="light"] .map-download-btn:hover {
+      background: rgba(37, 99, 235, 0.26);
+      color: #1e3a8a;
+    }
+
+    html[data-theme="light"] .summary-show-btn {
+      border-color: rgba(37, 99, 235, 0.35);
+      background: rgba(37, 99, 235, 0.14);
+      color: #1e3a8a;
+    }
+
+    html[data-theme="light"] .summary-show-btn:hover {
+      background: rgba(37, 99, 235, 0.22);
+      border-color: rgba(37, 99, 235, 0.48);
+    }
+
     html[data-theme="light"] #change-analysis-footer {
       background: #dce5f0;
       border-color: rgba(37, 99, 235, 0.24);
@@ -523,6 +594,12 @@
       border-bottom-color: rgba(100, 116, 139, 0.44);
     }
 
+    html[data-theme="light"] .assistant-dock-close {
+      background: rgba(214, 223, 235, 0.92);
+      border-color: rgba(100, 116, 139, 0.52);
+      color: #0f172a;
+    }
+
     html[data-theme="light"] .assistant-dock .chat-messages {
       border-color: rgba(100, 116, 139, 0.48);
       background: rgba(214, 223, 235, 0.9);
@@ -538,6 +615,22 @@
       background: rgba(220, 228, 238, 0.94);
       color: #0f172a;
       border-color: rgba(100, 116, 139, 0.5);
+    }
+
+    html[data-theme="light"] .summary-minimize-btn {
+      background: rgba(214, 223, 235, 0.92);
+      border-color: rgba(100, 116, 139, 0.52);
+      color: #0f172a;
+    }
+
+    html[data-theme="light"] #change-analysis-footer button.secondary {
+      background: #2563eb;
+      color: #f8fafc;
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22);
+    }
+
+    html[data-theme="light"] #change-analysis-footer button.secondary:hover {
+      background: #1d4ed8;
     }
 
     html[data-theme="light"] .chat-input {
