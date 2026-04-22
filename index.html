@@ -963,6 +963,262 @@
       color: #0f172a;
     }
 
+    /* Premium refinement layer: keeps identity, improves craftsmanship */
+    .site-header-inner {
+      padding: 14px clamp(14px, 3vw, 26px) 16px;
+    }
+
+    .site-header-top {
+      gap: 12px 22px;
+      padding-bottom: 13px;
+    }
+
+    .brand-block {
+      gap: 5px;
+    }
+
+    .top-brand-subtitle {
+      font-size: 11.5px;
+      line-height: 1.45;
+      max-width: 40rem;
+    }
+
+    .brand-meta {
+      font-size: 10.5px;
+      letter-spacing: 0.015em;
+    }
+
+    .modes-bar {
+      margin-top: 11px;
+      padding-top: 11px;
+      gap: 12px;
+    }
+
+    .mode-segments {
+      gap: 6px;
+      padding: 9px;
+      border-radius: 16px;
+    }
+
+    .monitor-radio span {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid transparent;
+      transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .monitor-radio:hover span {
+      background: rgba(59, 130, 246, 0.14);
+      border-color: rgba(96, 165, 250, 0.32);
+      color: var(--text-main);
+    }
+
+    .toolbar-fields {
+      gap: 12px;
+      padding: 12px;
+      border-radius: 16px;
+    }
+
+    .change-presets-panel,
+    .prediction-controls-panel {
+      border-radius: 14px;
+      padding: 10px;
+    }
+
+    .preset-grid {
+      gap: 8px;
+    }
+
+    .preset-card {
+      padding: 8px 10px;
+      border-radius: 11px;
+    }
+
+    select,
+    input[type="text"],
+    input[type="date"],
+    input[type="number"] {
+      min-height: 38px;
+      border-radius: 11px;
+      padding: 8px 11px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .site-header-controls {
+      padding: 12px;
+      gap: 10px;
+    }
+
+    .map-panel {
+      border-radius: 16px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.36);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .map-panel-header {
+      padding: 8px 12px;
+      font-weight: 650;
+      letter-spacing: 0.01em;
+    }
+
+    .map-download-btn {
+      min-height: 30px;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    }
+
+    .map-download-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .map-legend {
+      gap: 8px 18px;
+      padding: 11px 18px;
+    }
+
+    .map-inline-legend {
+      border-radius: 12px;
+      padding: 7px 11px;
+    }
+
+    .assistant-dock-head {
+      padding: 2px 3px 2px;
+    }
+
+    .assistant-dock .chat-messages {
+      border-radius: 12px;
+    }
+
+    .assistant-dock .bubble {
+      line-height: 1.45;
+    }
+
+    #change-analysis-footer {
+      padding: 1rem 1.15rem 1.05rem;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+    }
+
+    #change-analysis-footer #summary {
+      line-height: 1.5;
+    }
+
+    #change-analysis-footer #summary .summary-grid {
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    #change-analysis-footer #summary .summary-card {
+      border-radius: 11px;
+      padding: 9px 10px;
+    }
+
+    #reportInner {
+      border-radius: 22px;
+      padding: 1.6rem 1.85rem;
+      box-shadow: 0 26px 82px rgba(0, 0, 0, 0.42);
+    }
+
+    #reportInner .card {
+      border-radius: 15px;
+      padding: 1.05rem 1.15rem;
+      margin-bottom: 0.95rem;
+    }
+
+    .rpt-header,
+    .rpt-section,
+    .rpt-metric-card {
+      border-radius: 14px;
+    }
+
+    .rpt-section-body {
+      line-height: 1.68;
+    }
+
+    .help-btn,
+    .theme-btn,
+    .chat-send,
+    .video-btn,
+    .map-download-btn,
+    .summary-show-btn,
+    .video-preview-close,
+    .assistant-dock-close,
+    #change-analysis-footer button.secondary {
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    }
+
+    .help-btn:hover,
+    .theme-btn:hover,
+    .chat-send:hover,
+    .video-btn:hover,
+    .summary-show-btn:hover,
+    .video-preview-close:hover,
+    .assistant-dock-close:hover,
+    #change-analysis-footer button.secondary:hover {
+      transform: translateY(-1px);
+    }
+
+    .help-btn:active,
+    .theme-btn:active,
+    .chat-send:active,
+    .video-btn:active,
+    .map-download-btn:active,
+    .summary-show-btn:active,
+    .video-preview-close:active,
+    .assistant-dock-close:active,
+    #change-analysis-footer button.secondary:active {
+      transform: translateY(0);
+    }
+
+    html[data-theme="light"] .site-header-top {
+      border-bottom-color: rgba(100, 116, 139, 0.34);
+    }
+
+    html[data-theme="light"] .mode-segments {
+      background: rgba(224, 231, 240, 0.95);
+      border-color: rgba(100, 116, 139, 0.48);
+      box-shadow: 0 10px 22px rgba(30, 41, 59, 0.09);
+    }
+
+    html[data-theme="light"] .monitor-radio:hover span {
+      background: rgba(59, 130, 246, 0.18);
+      border-color: rgba(37, 99, 235, 0.32);
+    }
+
+    html[data-theme="light"] .toolbar-fields {
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    html[data-theme="light"] .map-panel {
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
+    }
+
+    html[data-theme="light"] .map-panel:hover {
+      box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+    }
+
+    html[data-theme="light"] .map-legend {
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    }
+
+    html[data-theme="light"] #change-analysis-footer {
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+    }
+
+    html[data-theme="light"] #reportInner {
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.16);
+    }
+
+    html[data-theme="light"] #reportInner .card,
+    html[data-theme="light"] .rpt-header,
+    html[data-theme="light"] .rpt-section,
+    html[data-theme="light"] .rpt-metric-card {
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+    }
+
+    html[data-theme="light"] .assistant-dock {
+      box-shadow: -10px 0 24px rgba(15, 23, 42, 0.08);
+    }
+
     @media (max-width: 640px) {
       .brand-meta {
         text-align: left;
