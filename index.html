@@ -1219,6 +1219,55 @@
       box-shadow: -10px 0 24px rgba(15, 23, 42, 0.08);
     }
 
+    /* Form validation */
+    .form-validation-banner {
+      display: none;
+      margin: 2px 0 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(248, 113, 113, 0.55);
+      background: rgba(127, 29, 29, 0.22);
+      color: #fecaca;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .form-validation-banner.show {
+      display: block;
+    }
+
+    html[data-theme="light"] .form-validation-banner {
+      border-color: rgba(220, 38, 38, 0.35);
+      background: rgba(254, 226, 226, 0.92);
+      color: #991b1b;
+    }
+
+    .field-error {
+      display: none;
+      margin-top: 4px;
+      font-size: 10px;
+      line-height: 1.25;
+      color: #fecaca;
+    }
+
+    html[data-theme="light"] .field-error {
+      color: #b91c1c;
+    }
+
+    .input-invalid,
+    select.input-invalid,
+    input.input-invalid {
+      border-color: rgba(248, 113, 113, 0.85) !important;
+      box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.22) !important;
+    }
+
+    html[data-theme="light"] .input-invalid,
+    html[data-theme="light"] select.input-invalid,
+    html[data-theme="light"] input.input-invalid {
+      border-color: rgba(220, 38, 38, 0.55) !important;
+      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.16) !important;
+    }
+
     @media (max-width: 640px) {
       .brand-meta {
         text-align: left;
@@ -3011,6 +3060,7 @@
     <div class="workspace-row">
       <div class="site-header-controls">
         <span class="monitor-toolbar-label">Map controls</span>
+        <div id="form-validation-banner" class="form-validation-banner" role="status" aria-live="polite"></div>
         <div class="monitor-toolbar">
           <div class="toolbar-fields">
             <div class="toolbar-field change-presets-panel" id="change-presets-panel">
@@ -3025,15 +3075,18 @@
                 <div id="dateA-container" style="flex:1;">
                   <small class="field-caption">Date A </small>
                   <input type="date" id="dateA" min="2018-01-01" />
+                  <div id="dateA-error" class="field-error" role="alert"></div>
                 </div>
                 <div id="dateB-container" style="flex:1;">
                   <small class="field-caption">Date B </small>
                   <input type="date" id="dateB" min="2018-01-01" />
+                  <div id="dateB-error" class="field-error" role="alert"></div>
                 </div>
               </div>
               <div id="change-window-wrap" style="margin-top:8px;">
                 <small class="field-caption">Window (+/- days around each date for change detection)</small>
                 <input type="number" id="windowDays" min="1" max="180" value="30" />
+                <div id="windowDays-error" class="field-error" role="alert"></div>
               </div>
               <div id="summary-analysis-trigger-wrap" class="summary-analysis-trigger-wrap" style="display:none;">
                 <button
@@ -3062,6 +3115,7 @@
                 />
                 <div id="city-suggestions" class="city-suggestions" role="listbox" hidden></div>
               </div>
+              <div id="city-error" class="field-error" role="alert"></div>
               <div class="field-caption">Home: empty region = world view. Chat can set location.</div>
               <div id="region-chip-wrap" class="region-chip-wrap" hidden>
                 <span class="region-chip" id="region-chip-label"></span>
@@ -3077,12 +3131,14 @@
                   <select id="prediction-region">
                     <option value="">Select region</option>
                   </select>
+                  <div id="prediction-region-error" class="field-error" role="alert"></div>
                 </div>
                 <div>
                   <small class="field-caption">Date</small>
                   <select id="prediction-date">
                     <option value="">Select date</option>
                   </select>
+                  <div id="prediction-date-error" class="field-error" role="alert"></div>
                 </div>
                 <button id="show-prediction-btn" type="button" class="video-btn" style="width:100%; margin-top:4px;">
                   Show Prediction
@@ -3193,9 +3249,12 @@
             class="chat-input"
             placeholder="Ask for guidance..."
             autocomplete="off"
+            aria-invalid="false"
+            aria-describedby="chat-input-error"
           />
           <button type="submit" class="chat-send">Send</button>
         </form>
+        <div id="chat-input-error" class="field-error" role="alert" style="margin:6px 2px 0;"></div>
       </aside>
     </div>
     <footer id="change-analysis-footer" hidden>
@@ -3927,6 +3986,7 @@
     }
 
     async function loadPredictionImageFromSelection() {
+      clearFormValidation();
       const region = document.getElementById("prediction-region").value;
       const date = document.getElementById("prediction-date").value;
 
@@ -3941,7 +4001,11 @@
       if (grid) grid.hidden = true;
 
       if (!region || !date) {
-        showPredictionMessage("Select region and date, then click Show Prediction.", false);
+        if (!region) setFieldError("prediction-region", "Please select a region.");
+        if (!date) setFieldError("prediction-date", "Please select a date.");
+        showFormValidationBanner("Choose a region and date to load a prediction.");
+        showPredictionMessage("", false);
+        if (msg) msg.hidden = true;
         return;
       }
 
@@ -3984,12 +4048,17 @@
     async function downloadPredictionImages() {
       const compImg = document.getElementById("comparison-image");
       const predImg = document.getElementById("prediction-image");
-      const region = document.getElementById("prediction-region").value || "region";
-      const date = document.getElementById("prediction-date").value || "date";
+      const regionRaw = document.getElementById("prediction-region").value;
+      const dateRaw = document.getElementById("prediction-date").value;
+      const region = regionRaw || "region";
+      const date = dateRaw || "date";
       const prefix = `terrascope_${region}_${date}`;
 
       if ((!compImg || compImg.hidden) && (!predImg || predImg.hidden)) {
-        alert("No prediction images loaded. Select region and date, then click Show Prediction first.");
+        clearFormValidation();
+        if (!regionRaw) setFieldError("prediction-region", "Please select a region.");
+        if (!dateRaw) setFieldError("prediction-date", "Please select a date.");
+        showFormValidationBanner("Show a prediction on the map before downloading images.");
         return;
       }
 
@@ -4131,6 +4200,39 @@
       };
     }
 
+    function captureControlsSnapshot() {
+      const modeInput = document.querySelector('input[name="mode"]:checked');
+      return {
+        modeValue: modeInput ? modeInput.value : "home",
+        date_a: document.getElementById("dateA").value,
+        date_b: document.getElementById("dateB").value,
+        city: document.getElementById("city").value,
+        window_days: document.getElementById("windowDays").value,
+        region_bbox: selectedChangePresetRegionBbox,
+        change_preset_id: selectedChangePresetId,
+      };
+    }
+
+    function restoreControlsSnapshot(snap) {
+      if (!snap) return;
+      const modeRadio = document.querySelector('input[name="mode"][value="' + snap.modeValue + '"]');
+      if (modeRadio) modeRadio.checked = true;
+      document.getElementById("dateA").value = snap.date_a;
+      document.getElementById("dateB").value = snap.date_b;
+      document.getElementById("city").value = snap.city;
+      document.getElementById("windowDays").value = snap.window_days;
+      selectedChangePresetRegionBbox = snap.region_bbox;
+      selectedChangePresetId = snap.change_preset_id;
+      const grid = document.getElementById("changePresetGrid");
+      if (grid) {
+        grid.querySelectorAll(".preset-card").forEach((c) => {
+          c.classList.toggle("selected", snap.change_preset_id && c.dataset.presetId === snap.change_preset_id);
+        });
+      }
+      updateDateUIForMode();
+      updateVideoToolsVisibility();
+    }
+
     function applyChatTextToControls(text) {
       const t = text.toLowerCase().trim();
       if (!t) return;
@@ -4212,6 +4314,209 @@
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
+    }
+
+    const FORM_VAL_IDS = [
+      "dateA",
+      "dateB",
+      "windowDays",
+      "city",
+      "prediction-region",
+      "prediction-date",
+      "chat-input",
+    ];
+
+    function clearFormValidation() {
+      const banner = document.getElementById("form-validation-banner");
+      if (banner) {
+        banner.textContent = "";
+        banner.classList.remove("show");
+      }
+      FORM_VAL_IDS.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.classList.remove("input-invalid");
+          if (id === "chat-input") el.setAttribute("aria-invalid", "false");
+        }
+        const err = document.getElementById(id + "-error");
+        if (err) {
+          err.textContent = "";
+          err.style.display = "none";
+        }
+      });
+    }
+
+    function setFieldError(fieldId, message) {
+      const el = document.getElementById(fieldId);
+      const err = document.getElementById(fieldId + "-error");
+      if (err) {
+        err.textContent = message || "";
+        err.style.display = message ? "block" : "none";
+      }
+      if (el) {
+        el.classList.toggle("input-invalid", !!message);
+        if (fieldId === "chat-input") el.setAttribute("aria-invalid", message ? "true" : "false");
+      }
+    }
+
+    function showFormValidationBanner(message) {
+      const banner = document.getElementById("form-validation-banner");
+      if (!banner) return;
+      banner.textContent = message || "";
+      banner.classList.toggle("show", !!message);
+    }
+
+    function parseISODateLocal(iso) {
+      const s = String(iso || "").trim().slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+      const parts = s.split("-").map((x) => parseInt(x, 10));
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      if (
+        d.getFullYear() !== parts[0] ||
+        d.getMonth() !== parts[1] - 1 ||
+        d.getDate() !== parts[2]
+      ) {
+        return null;
+      }
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function compareISODates(a, b) {
+      const da = parseISODateLocal(a);
+      const db = parseISODateLocal(b);
+      if (!da || !db) return null;
+      return da.getTime() - db.getTime();
+    }
+
+    /**
+     * Client-side guardrails before hitting the API. Returns { ok, message }.
+     * @param {object} state from getUIState()
+     * @param {{ intent?: string }} [opts] intent: "map" | "change" | "timeseries_video" | "report" | "chat"
+     */
+    function validateUIState(state, opts) {
+      const intent = (opts && opts.intent) || "map";
+      const mode = state && state.mode;
+      const dateA = String(state.date_a || "").trim();
+      const dateB = String(state.date_b || "").trim();
+      const city = String(state.city || "").trim();
+      const windowDays = Number(state.window_days);
+
+      if (!dateA) {
+        return {
+          ok: false,
+          message: "Please choose a start date (Date A).",
+          fields: { dateA: "This field is required." },
+        };
+      }
+      if (!dateB) {
+        return {
+          ok: false,
+          message: "Please choose an end date (Date B).",
+          fields: { dateB: "This field is required." },
+        };
+      }
+      if (parseISODateLocal(dateA) == null) {
+        return {
+          ok: false,
+          message: "Date A is not a valid calendar date.",
+          fields: { dateA: "Enter a valid date (YYYY-MM-DD)." },
+        };
+      }
+      if (parseISODateLocal(dateB) == null) {
+        return {
+          ok: false,
+          message: "Date B is not a valid calendar date.",
+          fields: { dateB: "Enter a valid date (YYYY-MM-DD)." },
+        };
+      }
+
+      if (mode === "home") {
+        return { ok: true, message: "", fields: {} };
+      }
+
+      const ord = compareISODates(dateA, dateB);
+      if (ord == null) {
+        return { ok: false, message: "Please choose valid dates.", fields: {} };
+      }
+
+      if (mode === "change_detection") {
+        if (ord >= 0) {
+          return {
+            ok: false,
+            message: "Start date must be before end date for change detection.",
+            fields: {
+              dateA: "Start date cannot be later than end date.",
+              dateB: "Please choose a valid date range.",
+            },
+          };
+        }
+        if (!Number.isFinite(windowDays) || windowDays < 1 || windowDays > 180) {
+          return {
+            ok: false,
+            message: "Window must be between 1 and 180 days.",
+            fields: {
+              windowDays: "Enter a whole number from 1 to 180.",
+            },
+          };
+        }
+        const hasRegion = !!city || !!state.region_bbox;
+        if (!hasRegion) {
+          return {
+            ok: false,
+            message: "Please select a region for change detection.",
+            fields: { city: "Please select a region (or pick a quick preset)." },
+          };
+        }
+      } else if (mode === "timeseries" || intent === "timeseries_video") {
+        if (ord > 0) {
+          return {
+            ok: false,
+            message: "Start date cannot be after end date for the time series.",
+            fields: {
+              dateA: "Start date cannot be later than end date.",
+              dateB: "Please choose a valid date range.",
+            },
+          };
+        }
+        if (!city) {
+          return {
+            ok: false,
+            message: "Please enter a region for the time series video.",
+            fields: { city: "Please select a region." },
+          };
+        }
+      } else if (ord > 0) {
+        return {
+          ok: false,
+          message: "Start date cannot be after end date.",
+          fields: {
+            dateA: "Start date cannot be later than end date.",
+            dateB: "Please choose a valid date range.",
+          },
+        };
+      }
+
+      if (intent === "report") {
+        if (mode !== "change_detection") {
+          return {
+            ok: false,
+            message: "Open a change-detection result before generating a report.",
+            fields: {},
+          };
+        }
+      }
+
+      return { ok: true, message: "", fields: {} };
+    }
+
+    function applyValidationResult(result) {
+      clearFormValidation();
+      if (!result || result.ok) return true;
+      const fields = result.fields || {};
+      Object.keys(fields).forEach((k) => setFieldError(k, fields[k]));
+      showFormValidationBanner(result.message || "Please fix the highlighted fields.");
+      return false;
     }
 
     function hideCitySuggestions() {
@@ -4857,11 +5162,23 @@
 
       if (state.mode === "prediction") {
         renderPredictionModeOnlyView();
+        clearFormValidation();
         if (showLoader) endLoading();
         return;
       }
       if (state.mode === "change_detection") {
+        const v = validateUIState(state, { intent: "change" });
+        if (!applyValidationResult(v)) {
+          if (showLoader) endLoading();
+          return;
+        }
         await loadChangeDetectionMode(state, showLoader);
+        if (showLoader) endLoading();
+        return;
+      }
+
+      const vMap = validateUIState(state, { intent: "map" });
+      if (!applyValidationResult(vMap)) {
         if (showLoader) endLoading();
         return;
       }
@@ -5009,10 +5326,16 @@
     }
 
     async function generateTimeSeriesVideo() {
-      beginLoading();
       const link = document.getElementById("video-download-link");
       const state = getUIState();
       const cadence = getVideoCadence();
+
+      const v = validateUIState(state, { intent: "timeseries_video" });
+      if (!applyValidationResult(v)) {
+        return;
+      }
+
+      beginLoading();
 
       link.style.display = "none";
       link.removeAttribute("href");
@@ -5066,6 +5389,20 @@
     document.getElementById("dateA").addEventListener("change", loadMapFromBackend);
     document.getElementById("dateB").addEventListener("change", loadMapFromBackend);
     document.getElementById("windowDays").addEventListener("change", loadMapFromBackend);
+    ["dateA", "dateB", "windowDays", "city"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("input", () => {
+        setFieldError(id, "");
+        const banner = document.getElementById("form-validation-banner");
+        if (banner && banner.classList.contains("show") && !FORM_VAL_IDS.some((fid) => {
+          const e = document.getElementById(fid + "-error");
+          return e && e.textContent;
+        })) {
+          showFormValidationBanner("");
+        }
+      });
+    });
     document.getElementById("city").addEventListener("blur", loadMapFromBackend);
     document.getElementById("city").addEventListener("blur", () => {
       setTimeout(() => {
@@ -5141,36 +5478,40 @@
     });
 
     document.getElementById("btnReport").addEventListener("click", async () => {
-      beginLoading();
-      try {
       const lastResult = lastChangeStats;
       if (!lastResult) {
-        alert("Run Generate first.");
+        showFormValidationBanner("Run change detection first so there is data to summarize.");
         return;
       }
-      const box = document.getElementById("reportBox");
-      const el = document.getElementById("reportContent");
-      el.innerHTML = '<div class="card"><p>Generating…</p></div>';
-      box.classList.add("show");
-      try {
-        const res = await fetch(`${API_BASE}/api/report`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            region: document.getElementById("city").value.trim() || lastResult.region_label,
-            date_range: {
-              start: document.getElementById("dateA").value,
-              end: document.getElementById("dateB").value,
-            },
-            change_stats: lastResult,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        renderReport(data);
-      } catch (err) {
-        el.innerHTML = '<div class="card err-box">Error: ' + escapeHtml(err.message) + "</div>";
+      const v = validateUIState(getUIState(), { intent: "report" });
+      if (!applyValidationResult(v)) {
+        return;
       }
+      beginLoading();
+      try {
+        const box = document.getElementById("reportBox");
+        const el = document.getElementById("reportContent");
+        el.innerHTML = '<div class="card"><p>Generating…</p></div>';
+        box.classList.add("show");
+        try {
+          const res = await fetch(`${API_BASE}/api/report`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              region: document.getElementById("city").value.trim() || lastResult.region_label,
+              date_range: {
+                start: document.getElementById("dateA").value,
+                end: document.getElementById("dateB").value,
+              },
+              change_stats: lastResult,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || res.statusText);
+          renderReport(data);
+        } catch (err) {
+          el.innerHTML = '<div class="card err-box">Error: ' + escapeHtml(err.message) + "</div>";
+        }
       } finally {
         endLoading();
       }
@@ -5184,8 +5525,16 @@
     });
 
     document.getElementById("prediction-region").addEventListener("change", () => {
+      setFieldError("prediction-region", "");
       updatePredictionDateOptions();
     });
+    document.getElementById("prediction-date").addEventListener("change", () => {
+      setFieldError("prediction-date", "");
+    });
+    const chatInputEl = document.getElementById("chat-input");
+    if (chatInputEl) {
+      chatInputEl.addEventListener("input", () => setFieldError("chat-input", ""));
+    }
     document.getElementById("show-prediction-btn").addEventListener("click", loadPredictionImageFromSelection);
 
     async function downloadMapSnapshot(map, panelTitle) {
@@ -5383,8 +5732,12 @@
       const input = document.getElementById("chat-input");
       const text = input.value.trim();
       if (!text) {
+        setFieldError("chat-input", "Please enter a message.");
+        showFormValidationBanner("Type a question, then press Send.");
         return;
       }
+      clearFormValidation();
+      const snapshot = captureControlsSnapshot();
       input.value = "";
       beginChatLoading();
       try {
@@ -5393,6 +5746,19 @@
         applyChatTextToControls(text);
         updateDateUIForMode();
         updateVideoToolsVisibility();
+        const vChat = validateUIState(getUIState(), { intent: "chat" });
+        if (!vChat.ok) {
+          restoreControlsSnapshot(snapshot);
+          updateDateUIForMode();
+          updateVideoToolsVisibility();
+          applyValidationResult(vChat);
+          appendMessage(
+            "bot",
+            "I updated your request, but the map settings are not valid yet. Fix the highlighted fields, then try again."
+          );
+          return;
+        }
+        clearFormValidation();
         await loadMapFromBackend(false);
 
         const state = getUIState();
