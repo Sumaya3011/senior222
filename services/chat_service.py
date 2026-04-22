@@ -48,7 +48,14 @@ def chat(req: ChatRequest):
 
     messages_for_api.append({"role": "user", "content": req.message})
 
-    raw = ask_chatbot(messages_for_api)
+    try:
+        raw = ask_chatbot(messages_for_api)
+    except Exception as e:
+        print(f"Chat backend error: {e}")
+        return {
+            "reply": "Sorry, I’m having trouble reaching the AI service right now. Please try again in a moment.",
+            "summary": "AI service temporarily unavailable.",
+        }
 
     explanation = raw
     summary = raw

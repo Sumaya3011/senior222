@@ -27,6 +27,20 @@
       --glass-blur: blur(14px);
     }
 
+    html[data-theme="light"] {
+      --bg-main: #f1f5f9;
+      --bg-nav: rgba(248, 250, 252, 0.94);
+      --bg-panel: rgba(255, 255, 255, 0.94);
+      --bg-bottom: rgba(248, 250, 252, 0.96);
+      --border-subtle: rgba(148, 163, 184, 0.55);
+      --accent: #2563eb;
+      --accent-glow: rgba(37, 99, 235, 0.22);
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-soft: #334155;
+      --glass-blur: blur(12px);
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -45,6 +59,11 @@
 
     body {
       margin: 0;
+    }
+
+    html[data-theme="light"] body {
+      background: #e2e8f0;
+      color: var(--text-main);
     }
 
     .app-root {
@@ -346,6 +365,177 @@
       background: rgba(59, 130, 246, 0.34);
       border-color: rgba(147, 197, 253, 0.75);
       color: #f8fafc;
+    }
+
+    .theme-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      background: rgba(15, 23, 42, 0.62);
+      color: var(--text-main);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 7px 12px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .theme-btn:hover {
+      background: rgba(59, 130, 246, 0.18);
+      border-color: rgba(96, 165, 250, 0.52);
+      color: var(--text-main);
+    }
+
+    html[data-theme="light"] .theme-btn {
+      background: rgba(255, 255, 255, 0.85);
+      border-color: rgba(148, 163, 184, 0.7);
+      color: #0f172a;
+    }
+
+    html[data-theme="light"] .help-btn {
+      color: #eff6ff;
+    }
+
+    html[data-theme="light"] .top-brand-title {
+      background: linear-gradient(90deg, #0f172a, #334155);
+    }
+
+    html[data-theme="light"] .site-header {
+      background: rgba(248, 250, 252, 0.94);
+      border-bottom-color: rgba(148, 163, 184, 0.5);
+    }
+
+    html[data-theme="light"] .site-header-controls {
+      background: rgba(248, 250, 252, 0.88);
+      border-right-color: rgba(148, 163, 184, 0.55);
+    }
+
+    html[data-theme="light"] .mode-segments {
+      background: rgba(255, 255, 255, 0.92);
+      border-color: rgba(148, 163, 184, 0.75);
+      box-shadow: 0 8px 20px rgba(30, 41, 59, 0.14);
+    }
+
+    html[data-theme="light"] .toolbar-fields {
+      background: rgba(255, 255, 255, 0.88);
+      border-color: rgba(148, 163, 184, 0.72);
+      box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.04);
+    }
+
+    html[data-theme="light"] .monitor-radio input:checked + span {
+      color: #0f172a;
+      background: linear-gradient(135deg, rgba(147, 197, 253, 0.6), rgba(96, 165, 250, 0.35));
+      box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.35);
+    }
+
+    html[data-theme="light"] .map-panel {
+      border-color: rgba(148, 163, 184, 0.7);
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+    }
+
+    html[data-theme="light"] .map-grid.has-change-row .map-panel {
+      border-color: rgba(148, 163, 184, 0.72);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.13);
+    }
+
+    html[data-theme="light"] .map-panel-header,
+    html[data-theme="light"] .map-grid.has-change-row .map-panel-header {
+      background: rgba(241, 245, 249, 0.9);
+      border-bottom-color: rgba(148, 163, 184, 0.58);
+      color: #334155;
+    }
+
+    html[data-theme="light"] .map-grid.has-change-row .map-panel-title {
+      color: #0f172a;
+    }
+
+    html[data-theme="light"] .region-chip {
+      background: rgba(241, 245, 249, 0.94);
+      border-color: rgba(148, 163, 184, 0.75);
+      color: #0f172a;
+    }
+
+    html[data-theme="light"] .map-legend {
+      background: rgba(248, 250, 252, 0.95);
+      border-top-color: rgba(148, 163, 184, 0.58);
+      color: #334155;
+    }
+
+    html[data-theme="light"] .map-legend-label {
+      color: #334155;
+    }
+
+    html[data-theme="light"] .map-inline-legend {
+      background: rgba(255, 255, 255, 0.93);
+      border-color: rgba(148, 163, 184, 0.75);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+      color: #0f172a;
+    }
+
+    html[data-theme="light"] .map-inline-legend .map-legend-title {
+      color: #1e293b;
+    }
+
+    html[data-theme="light"] .video-preview {
+      background: rgba(241, 245, 249, 0.97);
+    }
+
+    html[data-theme="light"] .video-preview-head {
+      color: #0f172a;
+    }
+
+    html[data-theme="light"] .video-preview-close {
+      background: rgba(255, 255, 255, 0.92);
+      color: #0f172a;
+      border-color: rgba(148, 163, 184, 0.75);
+    }
+
+    html[data-theme="light"] #change-analysis-footer {
+      background: #f8fafc;
+      border-color: rgba(37, 99, 235, 0.32);
+      border-top-color: rgba(37, 99, 235, 0.38);
+      color: #0f172a;
+    }
+
+    html[data-theme="light"] #reportInner {
+      background: #f8fafc;
+      color: #0f172a;
+      border-color: rgba(148, 163, 184, 0.8);
+    }
+
+    html[data-theme="light"] #reportInner .card {
+      background: rgba(255, 255, 255, 0.94);
+      border-color: rgba(148, 163, 184, 0.68);
+    }
+
+    html[data-theme="light"] .assistant-dock {
+      background: rgba(248, 250, 252, 0.98);
+      border-left-color: rgba(148, 163, 184, 0.62);
+      color: #0f172a;
+    }
+
+    html[data-theme="light"] .assistant-dock-head {
+      background: rgba(226, 232, 240, 0.86);
+      border-bottom-color: rgba(148, 163, 184, 0.62);
+    }
+
+    html[data-theme="light"] .assistant-dock .chat-messages {
+      border-color: rgba(148, 163, 184, 0.62);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    html[data-theme="light"] .assistant-dock .message.bot .bubble {
+      background: rgba(226, 232, 240, 0.88);
+      color: #0f172a;
+      border-color: rgba(148, 163, 184, 0.7);
+    }
+
+    html[data-theme="light"] #globalLoading .loading-pill {
+      background: rgba(255, 255, 255, 0.94);
+      color: #0f172a;
+      border-color: rgba(148, 163, 184, 0.7);
     }
 
     @media (max-width: 640px) {
@@ -2103,6 +2293,9 @@
           </div>
           <div class="top-actions">
             <p class="brand-meta">Dynamic World · Earth Engine · OpenAI</p>
+            <button type="button" class="theme-btn" id="theme-toggle-btn" aria-pressed="false" title="Toggle light/dark theme">
+              Light mode
+            </button>
             <button type="button" class="help-btn" id="help-open-btn" title="Open AI help assistant">
               Help
             </button>
@@ -2425,6 +2618,66 @@
       "segura_2026-06-05_predicted_full_rgb.png",
     ];
     const predictionDatesByRegion = new Map();
+    const THEME_STORAGE_KEY = "terrascope_theme_preference_v1";
+    const THEME_DARK = "dark";
+    const THEME_LIGHT = "light";
+
+    function normalizeTheme(theme) {
+      return theme === THEME_LIGHT ? THEME_LIGHT : THEME_DARK;
+    }
+
+    function readStoredTheme() {
+      try {
+        return normalizeTheme(localStorage.getItem(THEME_STORAGE_KEY));
+      } catch (e) {
+        return THEME_DARK;
+      }
+    }
+
+    function preferredInitialTheme() {
+      try {
+        const raw = localStorage.getItem(THEME_STORAGE_KEY);
+        if (raw === THEME_LIGHT || raw === THEME_DARK) return raw;
+      } catch (e) {}
+      try {
+        if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+          return THEME_LIGHT;
+        }
+      } catch (e) {}
+      return THEME_DARK;
+    }
+
+    function applyTheme(theme) {
+      const resolved = normalizeTheme(theme);
+      document.documentElement.setAttribute("data-theme", resolved);
+      const btn = document.getElementById("theme-toggle-btn");
+      if (btn) {
+        const isLight = resolved === THEME_LIGHT;
+        btn.textContent = isLight ? "Dark mode" : "Light mode";
+        btn.setAttribute("aria-pressed", String(isLight));
+        btn.setAttribute("title", isLight ? "Switch to dark mode" : "Switch to light mode");
+      }
+      return resolved;
+    }
+
+    function setThemePreference(theme) {
+      const resolved = applyTheme(theme);
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, resolved);
+      } catch (e) {}
+      return resolved;
+    }
+
+    function toggleThemePreference() {
+      const current = normalizeTheme(document.documentElement.getAttribute("data-theme"));
+      if (current === THEME_LIGHT) {
+        setThemePreference(THEME_DARK);
+      } else {
+        setThemePreference(THEME_LIGHT);
+      }
+    }
+
+    applyTheme(preferredInitialTheme());
 
     const DW_CLASSES = [
       { label: "Water", color: "#419bdf" },
@@ -4408,6 +4661,10 @@
     const helpOpenBtn = document.getElementById("help-open-btn");
     if (helpOpenBtn) {
       helpOpenBtn.addEventListener("click", () => setAssistantDockOpen(true));
+    }
+    const themeToggleBtn = document.getElementById("theme-toggle-btn");
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener("click", () => toggleThemePreference());
     }
     const helpCloseBtn = document.getElementById("help-close-btn");
     if (helpCloseBtn) {
