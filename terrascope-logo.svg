@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TerraScope compact logo">
+  <defs>
+    <linearGradient id="hex2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2d84cf" />
+      <stop offset="100%" stop-color="#2ea566" />
+    </linearGradient>
+    <linearGradient id="ocean2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#56a9ea" />
+      <stop offset="100%" stop-color="#227fc8" />
+    </linearGradient>
+    <linearGradient id="plane2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#318fdc" />
+      <stop offset="100%" stop-color="#1f60a9" />
+    </linearGradient>
+  </defs>
+
+  <path
+    d="M256 48 L422 142 L422 334 L256 434 L90 334 L90 142 Z"
+    fill="none"
+    stroke="url(#hex2)"
+    stroke-width="22"
+    stroke-linejoin="round"
+  />
+
+  <circle cx="256" cy="252" r="142" fill="url(#ocean2)" />
+
+  <path d="M150 218 C178 185, 224 170, 258 184 C246 206, 231 225, 206 238 C185 250, 168 245, 150 218 Z" fill="#62b96f" />
+  <path d="M282 182 C306 164, 336 160, 362 171 C346 198, 332 222, 315 236 C296 252, 286 268, 282 288 C257 274, 245 255, 246 236 C254 217, 266 198, 282 182 Z" fill="#4fad63" />
+  <path d="M198 286 C223 278, 246 287, 262 306 C270 320, 272 336, 271 352 C247 352, 222 344, 203 329 C192 318, 190 302, 198 286 Z" fill="#4ba85b" />
+  <path d="M288 292 C309 286, 332 290, 348 303 C359 315, 360 332, 351 345 C334 358, 316 361, 297 358 C289 340, 286 318, 288 292 Z" fill="#67be73" />
+
+  <g stroke="#f6c83b" stroke-width="5" stroke-linecap="round">
+    <line x1="122" y1="358" x2="235" y2="248" />
+    <line x1="180" y1="396" x2="266" y2="262" />
+  </g>
+
+  <g stroke="#eef6ff" stroke-linecap="round" fill="none">
+    <path d="M128 302 C197 278, 257 257, 309 229" stroke-width="8" />
+    <path d="M140 272 C216 245, 282 216, 336 187" stroke-width="6" />
+  </g>
+
+  <path d="M304 162 L444 117 L370 260 L345 225 Z" fill="url(#plane2)" />
+  <path d="M304 162 L370 260 L336 187 Z" fill="#185291" />
+  <path d="M255 202 L304 162 L345 225 L292 238 Z" fill="#3186d2" />
+</svg>

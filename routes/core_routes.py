@@ -13,12 +13,12 @@ def serve_frontend():
 
 @router.get("/terrascope-logo.png")
 def serve_logo():
-    return FileResponse("terrascope-logo.png", media_type="image/png")
+    return FileResponse("terrascope-logo.svg", media_type="image/svg+xml")
 
 
 @router.get("/welcome-brand-logo.png")
 def serve_welcome_brand_logo():
-    return FileResponse("welcome-brand-logo.png", media_type="image/png")
+    return FileResponse("welcome-brand-logo.svg", media_type="image/svg+xml")
 
 
 @router.get("/health")
