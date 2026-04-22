@@ -448,7 +448,23 @@
     }
 
     html[data-theme="light"] .top-brand-title {
-      background: linear-gradient(90deg, #0f172a, #334155);
+      background: none;
+      -webkit-background-clip: initial;
+      background-clip: border-box;
+      color: #0f172a;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-shadow: none;
+    }
+
+    html[data-theme="light"] .top-brand-logo-wrap {
+      background: rgba(214, 223, 235, 0.9);
+      border: 1px solid rgba(100, 116, 139, 0.42);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
+    }
+
+    html[data-theme="light"] .top-brand-logo {
+      filter: saturate(1.02) contrast(1.04);
     }
 
     html[data-theme="light"] .site-header {
@@ -813,7 +829,6 @@
     }
 
     html[data-theme="light"] .theme-btn,
-    html[data-theme="light"] .map-download-btn,
     html[data-theme="light"] .video-preview-close,
     html[data-theme="light"] .assistant-dock-close,
     html[data-theme="light"] .summary-show-btn,
@@ -825,7 +840,6 @@
     }
 
     html[data-theme="light"] .theme-btn:hover,
-    html[data-theme="light"] .map-download-btn:hover,
     html[data-theme="light"] .video-preview-close:hover,
     html[data-theme="light"] .assistant-dock-close:hover,
     html[data-theme="light"] .summary-show-btn:hover,
@@ -833,6 +847,30 @@
       background: rgba(191, 219, 254, 0.55);
       border-color: rgba(37, 99, 235, 0.45);
       color: #0f172a;
+    }
+
+    html[data-theme="light"] .map-download-btn {
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: #2563eb;
+      border: 1px solid #1d4ed8;
+      color: #f8fafc;
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.18);
+    }
+
+    html[data-theme="light"] .map-download-btn:hover {
+      background: #1d4ed8;
+      border-color: #1e40af;
+      color: #ffffff;
+    }
+
+    html[data-theme="light"] .map-download-btn:active {
+      background: #1e40af;
+      border-color: #1e3a8a;
+      color: #ffffff;
     }
 
     html[data-theme="light"] #change-analysis-footer #summary {
