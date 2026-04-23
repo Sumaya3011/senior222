@@ -2968,11 +2968,7 @@
     }
   </style>
   <script>
-    try {
-      if (localStorage.getItem("terrascope_welcome_seen_v9") === "1") {
-        document.documentElement.classList.add("welcome-already-seen");
-      }
-    } catch (e) {}
+    // Welcome overlay is intentionally shown on every load.
   </script>
 </head>
 <body>
