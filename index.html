@@ -3087,7 +3087,7 @@
               <div id="home-actions-wrap" style="margin-top:8px; display:none;">
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                   <button type="button" id="btn-home-generate" class="summary-show-btn">Generate</button>
-                  <button type="button" id="btn-home-clear" class="secondary">Clear</button>
+                  <button type="button" id="btn-home-clear" class="summary-show-btn">Clear</button>
                 </div>
               </div>
               <div id="summary-analysis-trigger-wrap" class="summary-analysis-trigger-wrap" style="display:none;">
@@ -5276,6 +5276,7 @@
               maxZoom: 19,
               crossOrigin: true,
             });
+            dwLayerA.addTo(mapA);
           }
         } else if (mode === "timeseries") {
           labelA.textContent =
