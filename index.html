@@ -4580,7 +4580,7 @@
       if (!input) return;
       input.value = label;
       hideCitySuggestions();
-      if (currentMode() !== "home") loadMapFromBackend();
+      loadMapFromBackend();
     }
 
     function renderCitySuggestions(items) {
@@ -5431,6 +5431,16 @@
     document.getElementById("city").addEventListener("keydown", (e) => {
       const box = document.getElementById("city-suggestions");
       if (!box || box.hidden) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (currentMode() === "home") {
+            const btn = document.getElementById("btn-home-generate");
+            if (btn) btn.click();
+          } else {
+            loadMapFromBackend();
+          }
+          return;
+        }
         if (e.key === "Escape") hideCitySuggestions();
         return;
       }
