@@ -3080,9 +3080,15 @@
                 </div>
               </div>
               <div id="change-window-wrap" style="margin-top:8px;">
-                <small class="field-caption">Window (+/- days around each date for change detection)</small>
+                <small class="field-caption">Window (+/- days around selected date)</small>
                 <input type="number" id="windowDays" min="1" max="180" value="30" />
                 <div id="windowDays-error" class="field-error" role="alert"></div>
+              </div>
+              <div id="home-actions-wrap" style="margin-top:8px; display:none;">
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="button" id="btn-home-generate" class="summary-show-btn">Generate</button>
+                  <button type="button" id="btn-home-clear" class="secondary">Clear</button>
+                </div>
               </div>
               <div id="summary-analysis-trigger-wrap" class="summary-analysis-trigger-wrap" style="display:none;">
                 <button
@@ -3719,6 +3725,36 @@
       if (!db.value) db.value = toIso(today);
     }
 
+    function getDefaultHomeDateRange() {
+      const today = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const toIso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const a = new Date(today);
+      a.setDate(a.getDate() - 14);
+      return { dateA: toIso(a), dateB: toIso(today) };
+    }
+
+    function loadFromControlsIfNotHome() {
+      if (currentMode() === "home") return;
+      loadMapFromBackend();
+    }
+
+    function resetHomeControlsToOriginal() {
+      const defaults = getDefaultHomeDateRange();
+      const dateAEl = document.getElementById("dateA");
+      const dateBEl = document.getElementById("dateB");
+      const cityEl = document.getElementById("city");
+      const windowEl = document.getElementById("windowDays");
+      if (dateAEl) dateAEl.value = defaults.dateA;
+      if (dateBEl) dateBEl.value = defaults.dateB;
+      if (cityEl) cityEl.value = "";
+      if (windowEl) windowEl.value = "30";
+      clearChangePresetSelection();
+      hideCitySuggestions();
+      clearFormValidation();
+      loadMapFromBackend();
+    }
+
     const defaultCenter = [26.3, 55.28];
     const SAT_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
@@ -3872,6 +3908,7 @@
       const presetsPanel = document.getElementById("change-presets-panel");
       const predictionPanel = document.getElementById("prediction-controls-panel");
       const windowWrap = document.getElementById("change-window-wrap");
+      const homeActionsWrap = document.getElementById("home-actions-wrap");
       const summaryTrig = document.getElementById("summary-analysis-trigger-wrap");
       const showPredictionOnly = mode === "prediction";
       if (dateControls) dateControls.style.display = showPredictionOnly ? "none" : "block";
@@ -3885,7 +3922,8 @@
       const showChangeOnly = mode === "change_detection";
       if (presetsWrap) presetsWrap.style.display = showChangeOnly ? "block" : "none";
       if (presetsPanel) presetsPanel.style.display = showChangeOnly ? "block" : "none";
-      if (windowWrap) windowWrap.style.display = showChangeOnly ? "block" : "none";
+      if (windowWrap) windowWrap.style.display = (showChangeOnly || mode === "home") ? "block" : "none";
+      if (homeActionsWrap) homeActionsWrap.style.display = mode === "home" ? "block" : "none";
       if (summaryTrig) summaryTrig.style.display = showChangeOnly ? "block" : "none";
       if (showChangeOnly) syncSummaryAnalysisToggleLabel();
     }
@@ -4542,7 +4580,7 @@
       if (!input) return;
       input.value = label;
       hideCitySuggestions();
-      loadMapFromBackend();
+      if (currentMode() !== "home") loadMapFromBackend();
     }
 
     function renderCitySuggestions(items) {
@@ -5365,9 +5403,9 @@
       }
     }
 
-    document.getElementById("dateA").addEventListener("change", loadMapFromBackend);
-    document.getElementById("dateB").addEventListener("change", loadMapFromBackend);
-    document.getElementById("windowDays").addEventListener("change", loadMapFromBackend);
+    document.getElementById("dateA").addEventListener("change", loadFromControlsIfNotHome);
+    document.getElementById("dateB").addEventListener("change", loadFromControlsIfNotHome);
+    document.getElementById("windowDays").addEventListener("change", loadFromControlsIfNotHome);
     ["dateA", "dateB", "windowDays", "city"].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -5382,7 +5420,7 @@
         }
       });
     });
-    document.getElementById("city").addEventListener("blur", loadMapFromBackend);
+    document.getElementById("city").addEventListener("blur", loadFromControlsIfNotHome);
     document.getElementById("city").addEventListener("blur", () => {
       setTimeout(() => {
         hideCitySuggestions();
@@ -5495,6 +5533,20 @@
         endLoading();
       }
     });
+
+    const homeGenerateBtn = document.getElementById("btn-home-generate");
+    if (homeGenerateBtn) {
+      homeGenerateBtn.addEventListener("click", () => {
+        clearFormValidation();
+        loadMapFromBackend();
+      });
+    }
+    const homeClearBtn = document.getElementById("btn-home-clear");
+    if (homeClearBtn) {
+      homeClearBtn.addEventListener("click", () => {
+        resetHomeControlsToOriginal();
+      });
+    }
 
     document.getElementById("region-chip-clear").addEventListener("click", () => {
       document.getElementById("city").value = "";
