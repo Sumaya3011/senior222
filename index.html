@@ -4668,19 +4668,10 @@
         return Number.isFinite(n) ? n : 0;
       };
       const clampPct = (v) => Math.max(0, Math.min(100, toNum(v)));
-      const toSignedPctText = (v) => {
-        const n = toNum(v);
-        if (n > 0) return "+" + n.toFixed(2) + "%";
-        if (n < 0) return n.toFixed(2) + "%";
-        return "0.00%";
-      };
       const changePct = clampPct(data.change_percent);
-      const waterRaw = toNum(data.water_loss_percent);
-      const vegRaw = toNum(data.vegetation_loss_percent);
-      const builtRaw = toNum(data.built_change_percent);
-      const waterPct = Math.min(100, Math.abs(waterRaw));
-      const vegPct = Math.min(100, Math.abs(vegRaw));
-      const builtPct = Math.min(100, Math.abs(builtRaw));
+      const waterPct = clampPct(data.water_loss_percent);
+      const vegPct = clampPct(data.vegetation_loss_percent);
+      const builtPct = clampPct(data.built_change_percent);
 
       let html = "";
       html += '<div class="summary-grid">';
@@ -4690,9 +4681,9 @@
       html += "</div>";
 
       html += '<div class="summary-metrics">';
-      html += '<div class="metric-row"><span class="metric-label">Water loss</span><div class="metric-bar water"><span style="width:' + waterPct + '%"></span></div><span class="metric-value">' + toSignedPctText(waterRaw) + "</span></div>";
-      html += '<div class="metric-row"><span class="metric-label">Vegetation</span><div class="metric-bar veg"><span style="width:' + vegPct + '%"></span></div><span class="metric-value">' + toSignedPctText(vegRaw) + "</span></div>";
-      html += '<div class="metric-row"><span class="metric-label">Built change</span><div class="metric-bar built"><span style="width:' + builtPct + '%"></span></div><span class="metric-value">' + toSignedPctText(builtRaw) + "</span></div>";
+      html += '<div class="metric-row"><span class="metric-label">Water loss</span><div class="metric-bar water"><span style="width:' + waterPct + '%"></span></div><span class="metric-value">-' + waterPct.toFixed(2) + "%</span></div>";
+      html += '<div class="metric-row"><span class="metric-label">Vegetation loss</span><div class="metric-bar veg"><span style="width:' + vegPct + '%"></span></div><span class="metric-value">-' + vegPct.toFixed(2) + "%</span></div>";
+      html += '<div class="metric-row"><span class="metric-label">Built change</span><div class="metric-bar built"><span style="width:' + builtPct + '%"></span></div><span class="metric-value">+' + builtPct.toFixed(2) + "%</span></div>";
       html += "</div>";
 
       summaryEl.innerHTML = html;
