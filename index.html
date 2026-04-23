@@ -2967,13 +2967,6 @@
       }
     }
   </style>
-  <script>
-    try {
-      if (localStorage.getItem("terrascope_welcome_seen_v9") === "1") {
-        document.documentElement.classList.add("welcome-already-seen");
-      }
-    } catch (e) {}
-  </script>
 </head>
 <body>
   <div
@@ -5608,7 +5601,6 @@
 
     (function initWelcomeOverlay() {
       const overlay = document.getElementById("welcome-overlay");
-      const KEY = "terrascope_welcome_seen_v9";
       const AUTO_MS = 3600;
       let autoTimer = null;
       let mapStarted = false;
@@ -5625,10 +5617,6 @@
         }
         startMapIfNeeded();
         overlay.classList.add("welcome-overlay--leaving");
-        try {
-          localStorage.setItem(KEY, "1");
-        } catch (e) {}
-        document.documentElement.classList.add("welcome-already-seen");
         let finished = false;
         function finish() {
           if (finished) return;
@@ -5646,12 +5634,6 @@
         overlay.addEventListener("transitionend", onTransitionEnd);
       }
       if (!overlay) {
-        startMapIfNeeded();
-        return;
-      }
-      if (document.documentElement.classList.contains("welcome-already-seen")) {
-        overlay.setAttribute("hidden", "");
-        overlay.setAttribute("aria-hidden", "true");
         startMapIfNeeded();
         return;
       }
