@@ -2967,6 +2967,13 @@
       }
     }
   </style>
+  <script>
+    try {
+      if (localStorage.getItem("terrascope_welcome_seen_v9") === "1") {
+        document.documentElement.classList.add("welcome-already-seen");
+      }
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <div
