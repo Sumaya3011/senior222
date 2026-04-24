@@ -3360,7 +3360,6 @@
     crossorigin=""
   ></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
 
   <script>
     const API_BASE = "";
@@ -5037,85 +5036,23 @@
       if (closeBtn) closeBtn.style.display = "none";
       var origMaxH = inner.style.maxHeight;
       var origOverflow = inner.style.overflow;
-      var exportExtra = null;
       inner.style.maxHeight = "none";
       inner.style.overflow = "visible";
       try {
-        if (!window.jspdf || !window.jspdf.jsPDF) {
-          throw new Error("PDF library is not available.");
-        }
-
-        // Include change mask snapshot only in the exported report.
-        if (typeof mapC !== "undefined" && mapC && currentMode() === "change_detection") {
-          var mapCContainer = mapC.getContainer ? mapC.getContainer() : null;
-          if (mapCContainer) {
-            mapC.invalidateSize({ pan: false });
-            var maskCanvas = await html2canvas(mapCContainer, {
-              backgroundColor: "#0c1428",
-              scale: 2,
-              useCORS: true,
-              logging: false,
-            });
-            var maskDataUrl = maskCanvas.toDataURL("image/png");
-            exportExtra = document.createElement("div");
-            exportExtra.className = "card rpt-export-change-mask";
-            exportExtra.style.marginTop = "14px";
-            exportExtra.innerHTML =
-              '<h3 style="margin-top:0;">Change mask</h3>' +
-              '<p style="margin-top:0;">Change detection mask snapshot at export time.</p>' +
-              '<img alt="Change mask snapshot" style="width:100%;border-radius:10px;border:1px solid rgba(51,65,85,0.5);" src="' +
-              maskDataUrl +
-              '">';
-            inner.appendChild(exportExtra);
-          }
-        }
-
         var canvas = await html2canvas(inner, {
           backgroundColor: "#0c1428",
           scale: 2,
           useCORS: true,
           logging: false,
         });
-
-        var jsPDF = window.jspdf.jsPDF;
-        var pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
-        var pageW = pdf.internal.pageSize.getWidth();
-        var pageH = pdf.internal.pageSize.getHeight();
-        var margin = 8;
-        var usableW = pageW - margin * 2;
-        var usableH = pageH - margin * 2;
-        var pxPerMm = canvas.width / usableW;
-        var slicePxH = Math.floor(usableH * pxPerMm);
-        var yPx = 0;
-        var pageIndex = 0;
-
-        while (yPx < canvas.height) {
-          var curSlicePxH = Math.min(slicePxH, canvas.height - yPx);
-          var sliceCanvas = document.createElement("canvas");
-          sliceCanvas.width = canvas.width;
-          sliceCanvas.height = curSlicePxH;
-          var sctx = sliceCanvas.getContext("2d");
-          sctx.drawImage(
-            canvas,
-            0, yPx, canvas.width, curSlicePxH,
-            0, 0, canvas.width, curSlicePxH
-          );
-          var img = sliceCanvas.toDataURL("image/png");
-          var imgH = curSlicePxH / pxPerMm;
-          if (pageIndex > 0) pdf.addPage();
-          pdf.addImage(img, "PNG", margin, margin, usableW, imgH);
-          yPx += curSlicePxH;
-          pageIndex += 1;
-        }
-
-        pdf.save("TerraScope_Report.pdf");
+        var link = document.createElement("a");
+        link.download = "TerraScope_Report.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
       } catch (e) {
         console.error("PDF download failed:", e);
-        alert("Download failed. Please try again.");
+        alert("Download failed. Try right-clicking the report and selecting 'Save as Image'.");
       } finally {
-        if (exportExtra && exportExtra.parentNode) {
-          exportExtra.parentNode.removeChild(exportExtra);
-        }
         inner.style.maxHeight = origMaxH;
         inner.style.overflow = origOverflow;
         if (btn) btn.style.display = "";
