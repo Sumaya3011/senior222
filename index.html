@@ -475,6 +475,11 @@
       filter: drop-shadow(0 4px 14px rgba(15, 23, 42, 0.18));
     }
 
+    html[data-theme="light"] .welcome-tagline {
+      color: #334155;
+      text-shadow: none;
+    }
+
     html[data-theme="light"] .site-header {
       background: rgba(226, 232, 240, 0.92);
       border-bottom-color: rgba(100, 116, 139, 0.42);
@@ -2938,6 +2943,18 @@
       animation: welcome-float 5.5s ease-in-out infinite;
     }
 
+    .welcome-tagline {
+      position: relative;
+      z-index: 1;
+      margin: 10px 0 0;
+      text-align: center;
+      font-size: clamp(12px, 1.8vw, 14px);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #cbd5e1;
+      text-shadow: 0 1px 6px rgba(15, 23, 42, 0.4);
+    }
+
     .welcome-sr-only {
       position: absolute;
       width: 1px;
@@ -2996,6 +3013,7 @@
           fetchpriority="high"
         />
       </div>
+      <p class="welcome-tagline">Observe . Analyse . Predict . Recommend .</p>
     </div>
   </div>
   <div class="app-root">
@@ -3016,7 +3034,7 @@
               </span>
               <div class="top-brand-title">TerraScope</div>
             </div>
-            <p class="top-brand-subtitle">Track change, predict the future.</p>
+            <p class="top-brand-subtitle">Observe . Analyse . Predict . Recommend .</p>
           </div>
           <div class="top-actions">
             <p class="brand-meta">Dynamic World · Earth Engine · OpenAI</p>
@@ -3085,7 +3103,7 @@
                 <div id="windowDays-error" class="field-error" role="alert"></div>
               </div>
               <div id="home-generate-wrap" style="margin-top:8px; display:none;">
-                <button id="btnGenerateHome" type="button" class="video-btn" style="width:100%;">
+                <button id="btnGenerateHome" type="button" class="video-btn" style="width:100%; margin-bottom:6px;">
                   Generate
                 </button>
               </div>
@@ -5295,6 +5313,9 @@
               maxZoom: 19,
               crossOrigin: true,
             });
+            if (!mapA.hasLayer(dwLayerA)) {
+              dwLayerA.addTo(mapA);
+            }
           }
         } else if (mode === "timeseries") {
           labelA.textContent =
@@ -5501,6 +5522,13 @@
     document.getElementById("generate-video-btn").addEventListener("click", generateTimeSeriesVideo);
     document.getElementById("btnGenerateHome").addEventListener("click", () => {
       if (currentMode() !== "home") return;
+      const cityVal = (document.getElementById("city").value || "").trim();
+      if (!cityVal) {
+        clearFormValidation();
+        setFieldError("city", "Please select a region.");
+        showFormValidationBanner("Please select a region before generating Home view.");
+        return;
+      }
       clearFormValidation();
       loadMapFromBackend();
     });
