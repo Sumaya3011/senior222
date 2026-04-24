@@ -3709,19 +3709,62 @@
     }
     window.openHomeSpotReport = openHomeSpotReport;
 
-    function initDateInputs() {
-      const da = document.getElementById("dateA");
-      const db = document.getElementById("dateB");
+    function getDefaultDateRangeValues() {
       const today = new Date();
       const pad = (n) => String(n).padStart(2, "0");
       const toIso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      const mx = toIso(today);
-      da.setAttribute("max", mx);
-      db.setAttribute("max", mx);
       const a = new Date(today);
       a.setDate(a.getDate() - 14);
-      if (!da.value) da.value = toIso(a);
-      if (!db.value) db.value = toIso(today);
+      return {
+        maxDate: toIso(today),
+        dateA: toIso(a),
+        dateB: toIso(today),
+      };
+    }
+
+    function initDateInputs() {
+      const da = document.getElementById("dateA");
+      const db = document.getElementById("dateB");
+      const defaults = getDefaultDateRangeValues();
+      da.setAttribute("max", defaults.maxDate);
+      db.setAttribute("max", defaults.maxDate);
+      if (!da.value) da.value = defaults.dateA;
+      if (!db.value) db.value = defaults.dateB;
+    }
+
+    function resetControlsForMode(mode) {
+      const defaults = getDefaultDateRangeValues();
+      const dateA = document.getElementById("dateA");
+      const dateB = document.getElementById("dateB");
+      const city = document.getElementById("city");
+      const windowDays = document.getElementById("windowDays");
+      const regionChipWrap = document.getElementById("region-chip-wrap");
+      const predictionRegion = document.getElementById("prediction-region");
+      const predictionDate = document.getElementById("prediction-date");
+      const reportBox = document.getElementById("reportBox");
+
+      if (dateA) dateA.value = defaults.dateA;
+      if (dateB) dateB.value = defaults.dateB;
+      if (city) city.value = "";
+      if (windowDays) windowDays.value = "30";
+      if (regionChipWrap) regionChipWrap.hidden = true;
+      if (predictionRegion) predictionRegion.value = "";
+      updatePredictionDateOptions();
+      if (predictionDate) predictionDate.value = "";
+
+      selectedChangePresetId = null;
+      selectedChangePresetRegionBbox = null;
+      clearChangePresetSelection();
+      hideCitySuggestions();
+      clearFormValidation();
+
+      if (reportBox && reportBox.classList.contains("show")) {
+        reportBox.classList.remove("show");
+      }
+
+      if (mode !== "change_detection") {
+        setChangeSummaryFooterVisible(false);
+      }
     }
 
     const defaultCenter = [26.3, 55.28];
@@ -5446,6 +5489,8 @@
 
     document.querySelectorAll('input[name="mode"]').forEach(r =>
       r.addEventListener("change", () => {
+        const mode = currentMode();
+        resetControlsForMode(mode);
         hideVideoPreview();
         updateDateUIForMode();
         updateVideoToolsVisibility();
@@ -5456,6 +5501,7 @@
     document.getElementById("generate-video-btn").addEventListener("click", generateTimeSeriesVideo);
     document.getElementById("btnGenerateHome").addEventListener("click", () => {
       if (currentMode() !== "home") return;
+      clearFormValidation();
       loadMapFromBackend();
     });
     document.getElementById("video-preview-close").addEventListener("click", hideVideoPreview);
