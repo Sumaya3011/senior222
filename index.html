@@ -4151,7 +4151,7 @@
         grid.hidden = false;
         msg.hidden = true;
 
-        label.textContent = "Current";
+        label.textContent = `${comparisonText} · Prediction: ${date}`;
       } catch (err) {
         showPredictionMessage("Images not available for this region and date.", true);
         console.error("Prediction image load error:", err);
