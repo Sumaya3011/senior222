@@ -2614,6 +2614,46 @@
       margin-bottom: 0.35rem;
     }
 
+    .rpt-changemask-img {
+      width: 100%;
+      max-width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      background: rgba(15, 23, 42, 0.35);
+      display: block;
+      margin-top: 8px;
+    }
+
+    /* Light document-like style only while exporting PDF */
+    #reportInner.report-export-light {
+      background: #ffffff !important;
+      color: #0f172a !important;
+      border-color: #cbd5e1 !important;
+      box-shadow: none !important;
+    }
+
+    #reportInner.report-export-light .rpt-title,
+    #reportInner.report-export-light .rpt-sub,
+    #reportInner.report-export-light .rpt-meta,
+    #reportInner.report-export-light .rpt-section-label,
+    #reportInner.report-export-light .rpt-section-body,
+    #reportInner.report-export-light .rpt-source-bar {
+      color: #0f172a !important;
+    }
+
+    #reportInner.report-export-light .rpt-metric-card,
+    #reportInner.report-export-light .rpt-section,
+    #reportInner.report-export-light .card {
+      background: #f8fafc !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+
+    #reportInner.report-export-light .rpt-metric-label,
+    #reportInner.report-export-light .rpt-metric-detail {
+      color: #334155 !important;
+    }
+
     .risk-row {
       display: flex;
       align-items: center;
@@ -3360,6 +3400,7 @@
     crossorigin=""
   ></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
 
   <script>
     const API_BASE = "";
@@ -5014,6 +5055,14 @@
         html += "</div>";
       }
 
+      if (lastChangeStats && lastChangeStats.change_url) {
+        html += '<div class="rpt-section">';
+        html += '<div class="rpt-section-label">Change Detection (Change Mask)</div>';
+        html += '<div class="rpt-section-body">Detected changed pixels for the selected before/after dates.</div>';
+        html += '<img class="rpt-changemask-img" src="' + escapeHtml(lastChangeStats.change_url) + '" alt="Change mask map" crossorigin="anonymous" />';
+        html += "</div>";
+      }
+
       html += '<div class="rpt-source-bar">';
       html += "Data source: GOOGLE/DYNAMICWORLD/V1 &nbsp;&middot;&nbsp; ";
       html += "Pixel scale: " + escapeHtml(meta.pixel_scale || "100 m") + " &nbsp;&middot;&nbsp; ";
@@ -5027,9 +5076,27 @@
       el.innerHTML = html;
     }
 
+    async function waitForImagesInElement(root) {
+      if (!root) return;
+      var imgs = Array.from(root.querySelectorAll("img"));
+      var waits = imgs.map(function(img) {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise(function(resolve) {
+          var done = function() { resolve(); };
+          img.addEventListener("load", done, { once: true });
+          img.addEventListener("error", done, { once: true });
+        });
+      });
+      await Promise.all(waits);
+    }
+
     async function downloadReportPdf() {
       var inner = document.getElementById("reportInner");
       if (!inner) return;
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("PDF export library did not load. Check your network and try again.");
+        return;
+      }
       var btn = inner.querySelector(".rpt-download-btn");
       if (btn) btn.style.display = "none";
       var closeBtn = inner.querySelector(".btn-close");
@@ -5038,21 +5105,42 @@
       var origOverflow = inner.style.overflow;
       inner.style.maxHeight = "none";
       inner.style.overflow = "visible";
+      inner.classList.add("report-export-light");
       try {
+        await waitForImagesInElement(inner);
         var canvas = await html2canvas(inner, {
-          backgroundColor: "#0c1428",
+          backgroundColor: "#ffffff",
           scale: 2,
           useCORS: true,
           logging: false,
         });
-        var link = document.createElement("a");
-        link.download = "TerraScope_Report.png";
-        link.href = canvas.toDataURL("image/png");
-        link.click();
+
+        var jsPDFCtor = window.jspdf.jsPDF;
+        var pdf = new jsPDFCtor("p", "pt", "a4");
+        var pageWidth = pdf.internal.pageSize.getWidth();
+        var pageHeight = pdf.internal.pageSize.getHeight();
+        var margin = 24;
+        var imgWidth = pageWidth - margin * 2;
+        var imgHeight = canvas.height * imgWidth / canvas.width;
+        var imgData = canvas.toDataURL("image/png");
+        var printableHeight = pageHeight - margin * 2;
+        var heightLeft = imgHeight;
+        var position = margin;
+
+        pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight, undefined, "FAST");
+        heightLeft -= printableHeight;
+        while (heightLeft > 0) {
+          position = margin - (imgHeight - heightLeft);
+          pdf.addPage();
+          pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight, undefined, "FAST");
+          heightLeft -= printableHeight;
+        }
+        pdf.save("TerraScope_Report.pdf");
       } catch (e) {
         console.error("PDF download failed:", e);
-        alert("Download failed. Try right-clicking the report and selecting 'Save as Image'.");
+        alert("Download failed. Please try again.");
       } finally {
+        inner.classList.remove("report-export-light");
         inner.style.maxHeight = origMaxH;
         inner.style.overflow = origOverflow;
         if (btn) btn.style.display = "";
